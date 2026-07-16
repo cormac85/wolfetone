@@ -83,11 +83,15 @@ The server is maintained by `scripts/maintain.sh`, which performs the following 
 7. Executes `occ upgrade` if required and disables maintenance mode.
 
 ### Cron Automation
-The script runs automatically every Sunday at 3:00 AM. Add this to the **root** crontab (`sudo crontab -e`):
+The script runs automatically every Sunday at 3:00 AM. 
+
+The following is added to the **root** crontab (`sudo crontab -e`) by the script `~/scripts/crontab_setup.sh`:
 
 ```cron
 0 3 * * 0 /home/cormac/docker/scripts/maintain.sh >> /var/log/nextcloud-maintain.log 2>&1
 ```
+
+`crontab_setup.sh` also adds the Nextcloud server maintenance "tick" cron job, scheduled every 5 minutes.
 
 ---
 
