@@ -1,0 +1,8 @@
+# Ignore all application state and data
+app-data/
+
+# Ignore sensitive system config files if accidentally copied
+*.secret
+*.cred
+*.key
+.env
