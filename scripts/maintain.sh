@@ -12,7 +12,7 @@ notify() {
     curl -sS --max-time 5 \
          -H "Title: Wolfetone Maintenance" \
          -d "$1" \
-         http://wolfetone:8080/backups
+         "${TAILSCALE_URL}/backups"
 }
 
 # Load system environment variables

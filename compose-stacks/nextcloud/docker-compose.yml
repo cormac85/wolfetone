@@ -17,11 +17,14 @@ services:
     container_name: ntfy
     environment:
       - NTFY_BASE_URL=${TAILSCALE_URL}
+      - NTFY_AUTH_DEFAULT_ACCESS="deny-all"
     volumes:
       - /var/cache/ntfy:/var/cache/ntfy
       - /var/lib/ntfy:/var/lib/ntfy
     ports:
       - 8080:80
+    command:
+      - serve
     restart: unless-stopped
 
   app:
