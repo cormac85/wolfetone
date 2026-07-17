@@ -12,6 +12,17 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy
+    environment:
+      - NTFY_BASE_URL=${TAILSCALE_URL}
+    volumes:
+      - /var/cache/ntfy:/var/cache/ntfy
+      - /var/lib/ntfy:/var/lib/ntfy
+    ports:
+      - 8080:80
+    restart: unless-stopped
 
   app:
     image: nextcloud:stable
