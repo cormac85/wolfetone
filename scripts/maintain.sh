@@ -1,54 +1,78 @@
 #!/bin/bash
 set -e
 
+# Logging function
+logit() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1"
+}
+
+# Notification function using nextcloud's occ command to push to the user
+notify() {
+    # $1 = Priority (e.g., "high", "default")
+    # $2 = Message text
+    
+    # Capitalise priority for clean reading
+    local priority=$(echo "$1" | tr '[:lower:]' '[:upper:]')
+    
+    sudo docker exec -u www-data "$NC_CONTAINER" php occ notification:generate \
+        "$NC_USER" \
+        "$2" \
+        -l "Priority: ${priority} | Source: wolfetone"
+}
 # Load system environment variables
 if [ -f /etc/environment ]; then
     export $(grep -v '^#' /etc/environment | xargs)
 fi
 
-# Set the absolute path to the directory containing your docker-compose.yml
-# UPDATE THIS PATH to match your setup
-NC_COMPOSE_DIR="/home/cormac/docker/compose-stacks/nextcloud"
+logit "--- Starting Maintenance Cycle ---"
 
-echo "--- Starting Maintenance ---"
-
-# --- 1. Backup ---
-echo "[1/3] Performing Snapshot..."
-# Put into maintenance mode
+# --- 1. Secure Snapshot Isolation ---
+logit "[1/5] Freezing Nextcloud application state..."
 sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --on
 
-# Dump the database securely by passing the credential file into the container mount
+logit "[2/5] Exporting Database Dump..."
 sudo docker exec -i "$NC_DB_CONTAINER" /usr/bin/mysqldump --defaults-extra-file=/etc/mysql/conf.d/nextcloud-db.cnf nextcloud > "$NC_BACKUP_DIR/db_backup.sql"
 
-# Keep only the last 5 database backups
-find "$NC_BACKUP_DIR" -name "db_backup.sql*" -mtime +5 -delete
+# Integrity Sanity Check (Check immediately after dump)
+if ! tail -n 20 "$NC_BACKUP_DIR/db_backup.sql" | grep -q "Dump completed on"; then
+    logit "CRITICAL ERROR: Database dump appears truncated! Aborting upgrade."
+    notify "high" "Backup failed: Database dump was truncated. Upgrade aborted."
+    sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
+    exit 1
+fi
 
-# Sync files
-sudo rsync -Aax "$NC_HOST_DATA_PATH/" "$NC_BACKUP_DIR/files/"
+logit "[3/5] Syncing Filesystem to Staging Storage..."
+sudo rsync -Aax --delete "$NC_HOST_DATA_PATH/" "$NC_BACKUP_DIR/files/"
 
-echo "Backup complete. Saved to $NC_BACKUP_DIR"
 
-# --- 2. System Updates ---
-echo "[2/3] Updating Host System Packages..."
+# --- 2. Host and Container Upgrades ---
+logit "[4/5] Updating Host Operating System..."
 sudo apt update && sudo apt upgrade -y
 
-# --- 3. Nextcloud Update ---
-echo "[3/3] Pulling new images and recreating container..."
-# Navigate to your docker configuration directory
+logit "[5/5] Pulling and rebuilding Nextcloud containers..."
 cd "$NC_COMPOSE_DIR"
-
-# Pull and update containers
 sudo docker compose pull
 sudo docker compose up -d
 
-# Release the manual maintenance lock so the upgrade tool doesn't think it is blocked
-# We use || true so the script doesn't fail if the lock is already released
-sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
-
-# Execute database migrations
+# Execute database schema migrations while still in maintenance mode
+logit "Executing Nextcloud database migrations..."
 sudo docker exec -u www-data "$NC_CONTAINER" php occ upgrade
 
-# Ensure maintenance mode is off when complete
-sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off
+# Disable maintenance mode now that application binaries and database match
+sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
+logit "Nextcloud application layer is fully operational."
 
-echo "--- Maintenance Complete ---"
+
+# --- 3. Network Outbound Backup ---
+# This is placed completely outside the application lifecycle downtime window
+logit "Initiating Borgmatic deduplication and Tailscale network transfer..."
+if borgmatic create --verbosity 1 --stats; then
+    logit "Borgmatic transfer completed successfully."
+    notify "default" "Maintenance complete. Systems upgraded and backed up to Datashank."
+else
+    logit "ERROR: Borgmatic network transfer failed."
+    notify "high" "Warning: Nextcloud upgraded successfully, but Borgmatic backup failed to complete."
+fi
+
+
+logit "--- Maintenance Cycle Complete ---"
