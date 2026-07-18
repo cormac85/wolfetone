@@ -12,6 +12,21 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy
+    environment:
+      - NTFY_BASE_URL=http://wolfetone.tailee21f7.ts.net:8081
+      - NTFY_AUTH_DEFAULT_ACCESS="write-only"
+    volumes:
+      - /var/cache/ntfy:/var/cache/ntfy
+      - /var/lib/ntfy:/var/lib/ntfy
+    ports:
+      # Binds exclusively to the host's native Tailscale interface
+      - "100.83.211.123:8081:80"
+    command:
+      - serve
+    restart: unless-stopped
 
   app:
     image: nextcloud:stable
