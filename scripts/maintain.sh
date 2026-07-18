@@ -50,14 +50,23 @@ logit "[4/5] Updating Host Operating System..."
 export DEBIAN_FRONTEND=noninteractive
 sudo apt update && sudo apt upgrade -y
 
-logit "[5/5] Pulling and rebuilding Nextcloud containers..."
 cd "$NC_COMPOSE_DIR"
 sudo docker compose pull
 sudo docker compose up -d
 
-# Give the container entrypoint script time to initialize and auto-migrate
-logit "Waiting for Nextcloud container initialization..."
-sleep 15
+# Instead of 'sleep 15', poll the container health to ensure it's ready
+logit "Waiting for Nextcloud to finish automatic migrations..."
+MAX_RETRIES=20
+COUNT=0
+while [ $COUNT -lt $MAX_RETRIES ]; do
+    # Check if maintenance mode is still locked by the entrypoint
+    if ! sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode | grep -q "true"; then
+        logit "Nextcloud migrated and exited maintenance mode automatically."
+        break
+    fi
+    sleep 10
+    COUNT=$((COUNT+1))
+done
 
 # Execute database schema migrations while still in maintenance mode
 logit "Executing Nextcloud database migrations..."
