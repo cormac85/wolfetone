@@ -21,19 +21,13 @@ services:
     volumes:
       - /var/cache/ntfy:/var/cache/ntfy
       - /var/lib/ntfy:/var/lib/ntfy
-    ports:
-      # Binds exclusively to the host's native Tailscale interface
-      - "100.83.211.123:8081:80"
     command:
       - serve
     restart: unless-stopped
-
   app:
     image: nextcloud:stable
     container_name: nextcloud-app
     restart: unless-stopped
-    ports:
-      - 8080:80
     volumes:
       - ../../app-data/nextcloud/html:/var/www/html
     environment:
@@ -43,4 +37,15 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     depends_on:
       - db
+      - caddy
+  caddy:
+    image: caddy:alpine
+    restart: unless-stopped
+    ports:
+      # UPDATE: Caddy now acts as the gateway for both services on the Tailscale IP
+      - "100.83.211.123:443:443"
+      - "100.83.211.123:8081:8081"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./certs:/certs
 

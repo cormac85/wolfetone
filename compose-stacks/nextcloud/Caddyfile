@@ -1,0 +1,4 @@
+wolfetone.tailee21f7.ts.net {
+    tls /certs/wolfetone.crt /certs/wolfetone.key
+    reverse_proxy nextcloud-app:80
+}
