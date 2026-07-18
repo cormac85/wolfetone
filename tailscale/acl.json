@@ -15,7 +15,7 @@
 		{
 			"action": "accept",
 			"src":    ["datashank", "pixel7"],
-			"dst":    ["wolfetone:80", "wolfetone:443", "wolfetone:8081"],
+			"dst":    ["wolfetone:80", "wolfetone:443", "wolfetone:8081", "wolfetone:8080"],
 		},
 
 		// Isolate administrative SSH access exclusively to your primary desktop
