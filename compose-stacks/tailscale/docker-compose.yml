@@ -3,6 +3,8 @@ services:
     image: tailscale/tailscale:stable
     container_name: tailscale
     network_mode: host  # Allows access to host ports (e.g., Nextcloud) and links to host UFW
+    ports:
+      - "127.0.0.1:8081:8081"
     volumes:
       - ../../app-data/tailscale:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
