@@ -16,14 +16,14 @@ services:
     image: binwiederhier/ntfy:latest
     container_name: ntfy
     environment:
-      - NTFY_BASE_URL=http://wolfetone.tailee21f7.ts.net:8081
-      - NTFY_AUTH_DEFAULT_ACCESS="write-only"
+      - NTFY_BASE_URL=https://wolfetone.tailee21f7.ts.net:8081
+      - NTFY_AUTH_DEFAULT_ACCESS=write-only
+      - NTFY_BEHIND_PROXY=true
     volumes:
       - /var/cache/ntfy:/var/cache/ntfy
       - /var/lib/ntfy:/var/lib/ntfy
     command:
       - serve
-      - --listen-http=:80
     restart: unless-stopped
   app:
     image: nextcloud:stable
@@ -42,6 +42,9 @@ services:
   caddy:
     image: caddy:alpine
     restart: unless-stopped
+    depends_on:
+      - ntfy
+      - app
     ports:
       # UPDATE: Caddy now acts as the gateway for both services on the Tailscale IP
       - "100.83.211.123:443:443"
