@@ -23,6 +23,7 @@ services:
       - /var/lib/ntfy:/var/lib/ntfy
     command:
       - serve
+      - --listen-http=:80
     restart: unless-stopped
   app:
     image: nextcloud:stable
