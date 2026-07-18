@@ -21,7 +21,7 @@
 		// Isolate administrative SSH access exclusively to your primary desktop
 		{
 			"action": "accept",
-			"src":    ["datashank"],
+			"src":    ["datashank", "pixel7"],
 			"dst":    ["wolfetone:22"],
 		},
 
