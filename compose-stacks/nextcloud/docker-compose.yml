@@ -17,7 +17,7 @@ services:
     container_name: ntfy
     environment:
       - NTFY_BASE_URL=${TAILSCALE_URL}
-      - NTFY_AUTH_DEFAULT_ACCESS="deny-all"
+      - NTFY_AUTH_DEFAULT_ACCESS="write-only"
     volumes:
       - /var/cache/ntfy:/var/cache/ntfy
       - /var/lib/ntfy:/var/lib/ntfy

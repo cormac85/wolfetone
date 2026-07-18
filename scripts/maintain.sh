@@ -27,10 +27,15 @@ logit "[1/5] Freezing Nextcloud application state..."
 sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --on
 
 logit "[2/5] Exporting Database Dump..."
-sudo docker exec -i "$NC_DB_CONTAINER" /usr/bin/mysqldump --defaults-extra-file=/etc/mysql/conf.d/nextcloud-db.cnf nextcloud > "$NC_BACKUP_DIR/db_backup.sql"
+SUFX=$(date +%F)
+CURRENT_SQL_BACKUP = "$NC_BACKUP_DIR/db_backup_${SUFX}.sql"
+sudo docker exec -i "$NC_DB_CONTAINER" /usr/bin/mysqldump --defaults-extra-file=/etc/mysql/conf.d/nextcloud-db.cnf nextcloud > "$CURRENT_SQL_BACKUP"
+
+# Prune local copies older than 3 days to keep /mnt/backups clean
+find "$NC_BACKUP_DIR" -name "db_backup_*.sql" -mtime +3 -delete
 
 # Integrity Sanity Check (Check immediately after dump)
-if ! tail -n 20 "$NC_BACKUP_DIR/db_backup.sql" | grep -q "Dump completed on"; then
+if ! tail -n 20 "$CURRENT_SQL_BACKUP" | grep -q "Dump completed on"; then
     logit "CRITICAL ERROR: Database dump appears truncated! Aborting upgrade."
     notify "Backup failed: Database dump was truncated. Upgrade aborted."
     sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
