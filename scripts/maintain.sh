@@ -28,7 +28,7 @@ sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --on
 
 logit "[2/5] Exporting Database Dump..."
 SUFX=$(date +%F)
-CURRENT_SQL_BACKUP = "$NC_BACKUP_DIR/db_backup_${SUFX}.sql"
+CURRENT_SQL_BACKUP="$NC_BACKUP_DIR/db_backup_${SUFX}.sql"
 sudo docker exec -i "$NC_DB_CONTAINER" /usr/bin/mysqldump --defaults-extra-file=/etc/mysql/conf.d/nextcloud-db.cnf nextcloud > "$CURRENT_SQL_BACKUP"
 
 # Prune local copies older than 3 days to keep /mnt/backups clean
