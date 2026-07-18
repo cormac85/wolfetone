@@ -5,23 +5,24 @@
 		"group:admin": ["cormac85@gmail.com"],
 	},
 	"hosts": {
-		"wolfetone":        "100.83.211.123", // The host OS running Borgmatic
-		"datashank":        "100.97.243.19",
-		"pixel7":           "100.97.35.75",
+		"wolfetone": "100.83.211.123", // The host OS running Borgmatic
+		"datashank": "100.97.243.19",
+		"pixel7":    "100.97.35.75",
+		"family":    "100.108.64.80",
 	},
 
 	"acls": [
 		// Permit daily devices to communicate ONLY with the web proxy ports on the server
 		{
 			"action": "accept",
-			"src":    ["datashank", "pixel7"],
+			"src":    ["datashank", "pixel7", "family"],
 			"dst":    ["wolfetone:80", "wolfetone:443", "wolfetone:8081", "wolfetone:8080"],
 		},
 
 		// Isolate administrative SSH access exclusively to your primary desktop
 		{
 			"action": "accept",
-			"src":    ["datashank", "pixel7"],
+			"src":    ["datashank", "pixel7", "family"],
 			"dst":    ["wolfetone:22"],
 		},
 
