@@ -5,8 +5,7 @@
 		"group:admin": ["cormac85@gmail.com"],
 	},
 	"hosts": {
-		"wolfetone":        "100.109.182.2", // Keeps existing Docker rules intact
-		"wolfetone-native": "100.83.211.123", // The host OS running Borgmatic
+		"wolfetone":        "100.83.211.123", // The host OS running Borgmatic
 		"datashank":        "100.97.243.19",
 		"pixel7":           "100.97.35.75",
 	},
@@ -16,7 +15,7 @@
 		{
 			"action": "accept",
 			"src":    ["datashank", "pixel7"],
-			"dst":    ["wolfetone:80", "wolfetone:443"],
+			"dst":    ["wolfetone:80", "wolfetone:443", "wolfetone:8081"],
 		},
 
 		// Isolate administrative SSH access exclusively to your primary desktop
@@ -26,10 +25,10 @@
 			"dst":    ["wolfetone:22"],
 		},
 
-		// Isolated SSH access for wolfetone for borgmatic backups to datashank desktop
+		// SSH access for wolfetone for borgmatic backups to datashank desktop
 		{
 			"action": "accept",
-			"src":    ["wolfetone-native"],
+			"src":    ["wolfetone"],
 			"dst":    ["datashank:22"],
 		},
 	],
