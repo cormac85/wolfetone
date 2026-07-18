@@ -59,12 +59,6 @@ sudo docker compose up -d
 logit "Waiting for Nextcloud container initialization..."
 sleep 15
 
-# Execute database schema migrations while still in maintenance mode
-logit "Executing Nextcloud database migrations..."
-sudo docker exec -u www-data "$NC_CONTAINER" php occ upgrade
-
-# Disable maintenance mode now that application binaries and database match
-sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
 logit "Nextcloud application layer is fully operational."
 
 

@@ -42,6 +42,11 @@ services:
   caddy:
     image: caddy:alpine
     restart: unless-stopped
+<<<<<<< Updated upstream
+=======
+    depends_on:
+      - ntfy
+>>>>>>> Stashed changes
     ports:
       # UPDATE: Caddy now acts as the gateway for both services on the Tailscale IP
       - "100.83.211.123:443:443"
