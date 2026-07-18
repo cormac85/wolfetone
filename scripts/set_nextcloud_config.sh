@@ -4,18 +4,23 @@
 
 set -e
 
-CONTAINER_NAME="nextcloud-app"
+# Load system environment variables
+if [ -f /etc/environment ]; then
+    export $(grep -v '^#' /etc/environment | xargs)
+fi
+
+
 DOMAIN="wolfetone.tailee21f7.ts.net"
 
-echo "Applying Nextcloud configuration to $CONTAINER_NAME..."
+echo "Applying Nextcloud configuration to $NC_CONTAINER..."
 
 # Helper function to execute occ commands as the web user
 occ_set() {
-    docker exec --user www-data "$CONTAINER_NAME" php occ config:system:set "$@"
+    docker exec --user www-data "$NC_CONTAINER" php occ config:system:set "$@"
 }
 
 occ_delete() {
-    docker exec --user www-data "$CONTAINER_NAME" php occ config:system:delete "$@"
+    docker exec --user www-data "$NC_CONTAINER" php occ config:system:delete "$@"
 }
 
 # 1. Enforce HTTPS Overwrites
@@ -40,6 +45,6 @@ occ_set trusted_proxies 2 --value="100.64.0.0/10" # Tailscale IP space
 occ_set trusted_proxies 3 --value="172.16.0.0/12" # Docker Bridge IP space
 
 echo "Configuration applied successfully. Rebuilding Nextcloud routing cache..."
-docker restart "$CONTAINER_NAME"
+docker restart "$NC_CONTAINER"
 
 echo "Done."
