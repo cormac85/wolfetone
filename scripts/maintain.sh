@@ -11,7 +11,7 @@ notify() {
     curl -sS --max-time 5 \
          -H "Title: Wolfetone Maintenance" \
          -d "$1" \
-         "http://100.83.211.123:8081/backups"
+         "https://100.83.211.123:8081/backups"
 }
 
 # Load system environment variables
