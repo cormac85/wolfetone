@@ -4,13 +4,24 @@
 
 set -e
 
-# Load system environment variables
-if [ -f /etc/environment ]; then
-    export $(grep -v '^#' /etc/environment | xargs)
+# 1. Load system environment variables
+ENV_FILE="/etc/environment"
+if [ -f "$ENV_FILE" ]; then
+    # Sourcing with allexport handles spaces in values cleaner than xargs grep
+    set -a
+    source "$ENV_FILE"
+    set +a
 fi
 
+# 2. Fallback defaults if environment variables are not set
+NC_CONTAINER="${NC_CONTAINER:-nextcloud-app}"
+TAILSCALE_DOMAIN=${TAILSCALE_DOMAIN:-wolfetone.tailee21f7.ts.net}
 
-DOMAIN="wolfetone.tailee21f7.ts.net"
+# 3. Sanity Check: Ensure the target container is actually running
+if ! docker ps --format '{{.Names}}' | grep -q "^${NC_CONTAINER}$"; then
+    echo "Error: Target container '$NC_CONTAINER' is not running."
+    exit 1
+fi
 
 echo "Applying Nextcloud configuration to $NC_CONTAINER..."
 
@@ -23,19 +34,18 @@ occ_delete() {
     docker exec --user www-data "$NC_CONTAINER" php occ config:system:delete "$@"
 }
 
-# 1. Enforce HTTPS Overwrites
+# 4. Enforce HTTPS Overwrites
 echo "Configuring protocol overwrites..."
-occ_set overwritehost --value="$DOMAIN"
+occ_set overwritehost --value="$TAILSCALE_DOMAIN"
 occ_set overwriteprotocol --value="https"
-occ_set overwrite.cli.url --value="https://$DOMAIN"
+occ_set overwrite.cli.url --value="https://$TAILSCALE_DOMAIN"
 
-# 2. Rebuild Trusted Domains
+# 5. Rebuild Trusted Domains
 echo "Configuring trusted domains..."
-# Delete the array to clear out legacy IPs (like .58) before rebuilding
 occ_delete trusted_domains || true
-occ_set trusted_domains 0 --value="$DOMAIN"
+occ_set trusted_domains 0 --value="$TAILSCALE_DOMAIN"
 
-# 3. Rebuild Trusted Proxies
+# 6. Rebuild Trusted Proxies
 echo "Configuring trusted proxies..."
 # Delete the array to ensure no duplicate or legacy proxy definitions exist
 occ_delete trusted_proxies || true
