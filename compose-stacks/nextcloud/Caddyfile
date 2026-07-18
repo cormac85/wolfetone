@@ -1,0 +1,12 @@
+# Route 1: Nextcloud (Standard HTTPS on 443)
+wolfetone.tailee21f7.ts.net {
+    tls /certs/wolfetone.crt /certs/wolfetone.key
+    reverse_proxy app:80
+}
+
+# Route 2: ntfy (HTTPS on 8081)
+wolfetone.tailee21f7.ts.net:8081 {
+    tls /certs/wolfetone.crt /certs/wolfetone.key
+    reverse_proxy ntfy:80
+}
+

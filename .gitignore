@@ -6,3 +6,4 @@ app-data/
 *.cred
 *.key
 .env
+certs/
