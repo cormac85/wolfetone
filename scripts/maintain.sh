@@ -1,17 +1,10 @@
 #!/bin/bash
 set -e
 
+# 0. Setup and variable definitions
 # Logging function
 logit() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1"
-}
-
-# Notification function using nextcloud's occ command to push to the user
-notify() {
-    curl -k -sS --max-time 5 \
-         -H "Title: Wolfetone Maintenance" \
-         -d "$1" \
-         "https://wolfetone.tailee21f7.ts.net:8081/backups"
 }
 
 # This trap runs whenever the script exits, even on error.
@@ -27,6 +20,14 @@ if [ -f /home/cormac/docker/.env ]; then
     source /home/cormac/docker/.env
     set +a
 fi
+
+# Notification function using nextcloud's occ command to push to the user
+notify() {
+    curl -k -sS --max-time 5 \
+         -H "Title: Wolfetone Maintenance" \
+         -d "$1" \
+         "${TAILSCALE_WOLFETONE_URL}:8081/backups"
+}
 
 logit "--- Starting Maintenance Cycle ---"
 
