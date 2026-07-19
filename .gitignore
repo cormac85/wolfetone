@@ -6,6 +6,7 @@ app-data/
 *.cred
 *.key
 certs/
+secrets/*
 
 # other
 # diff.txt i use to put diffs for sharing with agents
