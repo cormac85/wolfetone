@@ -8,22 +8,27 @@ services:
       - ../../app-data/nextcloud/db:/var/lib/mysql
       - /etc/nextcloud-db.cnf:/etc/mysql/conf.d/nextcloud-db.cnf:ro
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db_root_pw  
+      - MYSQL_DATABASE_FILE=/run/secrets/db_database
+      - MYSQL_USER_FILE=/run/secrets/db_user
+      - MYSQL_PASSWORD_FILE=/run/secrets/db_pw
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
       timeout: 5s
       retries: 3
+    secrets:
+      - db_root_pw
+      - db_pw
+      - db_user
+      - db_database
   ntfy:
     image: binwiederhier/ntfy:latest
     container_name: ntfy
     environment:
-      - NTFY_BASE_URL=https://wolfetone.tailee21f7.ts.net:8081
-      - NTFY_AUTH_DEFAULT_ACCESS=write-only
-      - NTFY_BEHIND_PROXY=true
+      NTFY_BASE_URL: "${TAILSCALE_WOLFETONE_URL}:8081"
+      NTFY_AUTH_DEFAULT_ACCESS: "write-only"
+      NTFY_BEHIND_PROXY: "true"
     volumes:
       - /var/cache/ntfy:/var/cache/ntfy
       - /var/lib/ntfy:/var/lib/ntfy
@@ -38,11 +43,15 @@ services:
       - ../../app-data/nextcloud/html:/var/www/html
     environment:
       - MYSQL_HOST=db
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD_FILE=/run/secrets/db_pw
     depends_on:
       - db
+    secrets:
+      - db_user
+      - db_pw
+      - db_database
   caddy:
     image: caddy:alpine
     restart: unless-stopped
@@ -51,9 +60,18 @@ services:
       - ntfy
     ports:
       # UPDATE: Caddy now acts as the gateway for both services on the Tailscale IP
-      - "100.83.211.123:443:443"
-      - "100.83.211.123:8081:8081"
+      - "${TAILSCALE_WOLFETONE_IP}:443:443"
+      - "${TAILSCALE_WOLFETONE_IP}:8081:8081"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./certs:/certs
 
+secrets:
+  db_root_pw:
+    file: ../../secrets/db_root_password.txt
+  db_pw:
+    file: ../../secrets/db_password.txt
+  db_user:
+    file: ../../secrets/db_user.txt
+  db_database:
+    file: ../../secrets/db_database.txt
