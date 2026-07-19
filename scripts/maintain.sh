@@ -8,11 +8,18 @@ logit() {
 
 # Notification function using nextcloud's occ command to push to the user
 notify() {
-    curl -sS --max-time 5 \
+    curl -k -sS --max-time 5 \
          -H "Title: Wolfetone Maintenance" \
          -d "$1" \
-         "https://100.83.211.123:8081/backups"
+         "https://wolfetone.tailee21f7.ts.net:8081/backups"
 }
+
+# This trap runs whenever the script exits, even on error.
+cleanup() {
+    logit "Maintenance script interrupted. Disabling maintenance mode..."
+    sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
+}
+trap cleanup ERR EXIT
 
 # Load system environment variables
 if [ -f /etc/environment ]; then
@@ -68,12 +75,6 @@ while [ $COUNT -lt $MAX_RETRIES ]; do
     COUNT=$((COUNT+1))
 done
 
-# Execute database schema migrations while still in maintenance mode
-logit "Executing Nextcloud database migrations..."
-sudo docker exec -u www-data "$NC_CONTAINER" php occ upgrade
-
-# Disable maintenance mode now that application binaries and database match
-sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
 logit "Nextcloud application layer is fully operational."
 
 
