@@ -21,9 +21,9 @@ services:
     image: binwiederhier/ntfy:latest
     container_name: ntfy
     environment:
-      - NTFY_BASE_URL=https://wolfetone.tailee21f7.ts.net:8081
-      - NTFY_AUTH_DEFAULT_ACCESS=write-only
-      - NTFY_BEHIND_PROXY=true
+      NTFY_BASE_URL: "https://wolfetone.tailee21f7.ts.net:8081"
+      NTFY_AUTH_DEFAULT_ACCESS: "write-only"
+      NTFY_BEHIND_PROXY: "true"
     volumes:
       - /var/cache/ntfy:/var/cache/ntfy
       - /var/lib/ntfy:/var/lib/ntfy

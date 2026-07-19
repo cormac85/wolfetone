@@ -1,7 +1,7 @@
 # Test Snippets
 Snippets of bash or whatever to test various aspects of Wolfetone.
 
-SOme day i'll have a repeatable deployment and testing procedures!
+Some day i'll have a repeatable deployment and testing procedures!
 
 ## Ntfy
 ### 1. Simple test on "backups" topic
