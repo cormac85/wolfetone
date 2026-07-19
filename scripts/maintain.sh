@@ -22,8 +22,10 @@ cleanup() {
 trap cleanup ERR EXIT
 
 # Load system environment variables
-if [ -f /etc/environment ]; then
-    export $(grep -v '^#' /etc/environment | xargs)
+if [ -f /home/cormac/docker/.env ]; then
+    set -a
+    source /home/cormac/docker/.env
+    set +a
 fi
 
 logit "--- Starting Maintenance Cycle ---"
