@@ -12,6 +12,11 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
   ntfy:
     image: binwiederhier/ntfy:latest
     container_name: ntfy
@@ -38,15 +43,12 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     depends_on:
       - db
-      - caddy
   caddy:
     image: caddy:alpine
     restart: unless-stopped
-<<<<<<< Updated upstream
-=======
     depends_on:
+      - app
       - ntfy
->>>>>>> Stashed changes
     ports:
       # UPDATE: Caddy now acts as the gateway for both services on the Tailscale IP
       - "100.83.211.123:443:443"

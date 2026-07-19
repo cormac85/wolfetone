@@ -14,6 +14,13 @@ notify() {
          "https://100.83.211.123:8081/backups"
 }
 
+# This trap runs whenever the script exits, even on error.
+cleanup() {
+    logit "Maintenance script interrupted. Disabling maintenance mode..."
+    sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
+}
+trap cleanup ERR EXIT
+
 # Load system environment variables
 if [ -f /etc/environment ]; then
     export $(grep -v '^#' /etc/environment | xargs)
