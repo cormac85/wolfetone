@@ -4,7 +4,7 @@ set -e
 echo "--- Setting up Server Cron Jobs ---"
 
 # Define the jobs
-ROOT_JOB="0 3 * * 0 /home/cormac/docker/scripts/maintain.sh >> /var/log/nextcloud-maintain.log 2>&1"
+ROOT_JOB="0 23 * * 0 /home/cormac/docker/scripts/maintain.sh >> /var/log/nextcloud-maintain.log 2>&1"
 USER_JOB="*/5 * * * * docker exec -u www-data nextcloud-app php -f /var/www/html/cron.php"
 
 # 1. Setup Root Cron (Maintenance)
