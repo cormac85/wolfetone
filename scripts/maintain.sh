@@ -8,10 +8,10 @@ logit() {
 
 # Notification function using nextcloud's occ command to push to the user
 notify() {
-    curl -sS --max-time 5 \
+    curl -k -sS --max-time 5 \
          -H "Title: Wolfetone Maintenance" \
          -d "$1" \
-         "https://100.83.211.123:8081/backups"
+         "https://wolfetone.tailee21f7.ts.net:8081/backups"
 }
 
 # This trap runs whenever the script exits, even on error.
