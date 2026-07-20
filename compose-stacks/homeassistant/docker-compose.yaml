@@ -12,3 +12,5 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    environment:
+      - CADDY_TAILSCALE_IP=${TAILSCALE_WOLFETONE_IP}
