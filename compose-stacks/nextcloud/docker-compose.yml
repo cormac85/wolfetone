@@ -62,7 +62,6 @@ services:
       # UPDATE: Caddy now acts as the gateway for both services on the Tailscale IP
       - "${TAILSCALE_WOLFETONE_IP}:443:443"    # web
       - "${TAILSCALE_WOLFETONE_IP}:8081:8081"  # ntfy
-      - "${TAILSCALE_WOLFETONE_IP}:8123:8123"  # homeassistant
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./certs:/certs
