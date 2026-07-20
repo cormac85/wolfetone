@@ -16,10 +16,16 @@
 		{
 			"action": "accept",
 			"src":    ["datashank", "pixel7", "family"],
-			"dst":    ["wolfetone:80", "wolfetone:443", "wolfetone:8081", "wolfetone:8080"],
+			"dst":    [
+				"wolfetone:80",
+				"wolfetone:443",
+				"wolfetone:8081",
+				"wolfetone:8080",
+				"wolfetone:8443",
+			],
 		},
 
-		// Isolate administrative SSH access exclusively to your primary desktop
+		// SSH access to devices for in case of hardware failure
 		{
 			"action": "accept",
 			"src":    ["datashank", "pixel7", "family"],
