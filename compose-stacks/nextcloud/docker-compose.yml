@@ -58,10 +58,13 @@ services:
     depends_on:
       - app
       - ntfy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       # UPDATE: Caddy now acts as the gateway for both services on the Tailscale IP
       - "${TAILSCALE_WOLFETONE_IP}:443:443"    # web
       - "${TAILSCALE_WOLFETONE_IP}:8081:8081"  # ntfy
+      - "${TAILSCALE_WOLFETONE_IP}:8443:8443"  # homeassistant
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./certs:/certs
