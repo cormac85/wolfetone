@@ -10,3 +10,8 @@ wolfetone.tailee21f7.ts.net:8081 {
     reverse_proxy ntfy:80
 }
 
+# Route 3: Home Assistant (HTTPS on 8123)
+{$TAILSCALE_WOLFETONE_URL}:8443 {
+    tls internal
+    reverse_proxy 172.17.0.1:8123
+}
