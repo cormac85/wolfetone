@@ -7,12 +7,12 @@ logit() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1"
 }
 
-# This trap runs whenever the script exits, even on error.
+# Define cleanup for unexpected exits or errors
 cleanup() {
-    logit "Maintenance script interrupted. Disabling maintenance mode..."
+    logit "Maintenance script interrupted or failed. Disabling maintenance mode..."
     sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
 }
-trap cleanup ERR EXIT
+trap cleanup ERR INT TERM
 
 # Load system environment variables
 if [ -f /home/cormac/docker/.env ]; then
@@ -60,8 +60,20 @@ logit "[4/5] Updating Host Operating System..."
 export DEBIAN_FRONTEND=noninteractive
 sudo apt update && sudo apt upgrade -y
 
+
+logit "[4/5] Updating Nextcloud Containers and Apps..."
+
+# Enforce www-data ownership on custom apps to avoid permission issues during updates
+sudo chown -R 33:33 "$NC_HOST_DATA_PATH/custom_apps"
+sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:data-fingerprint
+# Disable the calendar app temporarily to avoid update conflicts
+# TODO: Add other 3rd party apps here if they are known to cause issues during updates
+sudo docker exec -u www-data "$NC_CONTAINER" php occ app:disable calendar
+
 cd "$NC_COMPOSE_DIR"
 sudo docker compose pull
+
+logit "Enforcing www-data ownership on Nextcloud data volumes..."
 sudo docker compose up -d
 
 # Instead of 'sleep 15', poll the container health to ensure it's ready
@@ -77,6 +89,14 @@ while [ $COUNT -lt $MAX_RETRIES ]; do
     sleep 10
     COUNT=$((COUNT+1))
 done
+
+# After your while loop confirms maintenance mode is false:
+logit "Updating all custom Nextcloud apps..."
+if sudo docker exec -u www-data "$NC_CONTAINER" php occ app:update --all; then
+    logit "Apps updated successfully."
+else
+    logit "WARNING: One or more apps failed to update. Check Nextcloud logs."
+fi
 
 logit "Nextcloud application layer is fully operational."
 
@@ -94,3 +114,10 @@ fi
 
 
 logit "--- Maintenance Cycle Complete ---"
+logit "--- Tidying up ---"
+# Disable maintenance mode explicitly before exiting
+sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --off || true
+
+# Remove trap on normal exit
+trap - ERR INT TERM EXIT
+logit "--- Maintenance script finished successfully ---"
