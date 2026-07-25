@@ -1,0 +1,71 @@
+name: Homelab CI Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  lint-scripts:
+    name: ShellCheck (Scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './scripts'
+
+  validate-docker-compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Home Assistant Compose
+        run: docker compose -f ./compose-stacks/homeassistant/docker-compose.yaml config -q
+
+      - name: Validate Nextcloud Compose
+        run: docker compose -f ./compose-stacks/nextcloud/docker-compose.yml config -q
+
+  validate-homeassistant:
+    name: Validate Home Assistant Config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test HA Configuration Syntax
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/app-data/homeassistant:/config \
+            homeassistant/home-assistant:stable \
+            hass --script check_config -c /config
+
+  validate-caddy:
+    name: Validate Caddyfile Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Nextcloud Caddyfile
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/compose-stacks/nextcloud/Caddyfile:/etc/caddy/Caddyfile \
+            caddy:latest \
+            caddy validate --config /etc/caddy/Caddyfile
+
+  validate-tailscale-acl:
+    name: Validate Tailscale ACL Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify ACL JSON format
+        run: jq . ./tailscale/acl.json > /dev/null
