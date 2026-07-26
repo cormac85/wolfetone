@@ -19,6 +19,34 @@ jobs:
         with:
           scandir: './scripts'
 
+  validate-nextcloud-scripts:
+    name: Lint Nextcloud Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck on Nextcloud setup scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './compose-stacks/nextcloud'
+
+  validate-nextcloud-config:
+    name: Validate Nextcloud PHP Config Templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lint PHP Syntax of Config Templates
+        run: |
+          if [ -f "./compose-stacks/nextcloud/config.php.example" ]; then
+            docker run --rm \
+              -v ${{ github.workspace }}/compose-stacks/nextcloud:/var/www/html \
+              php:cli \
+              php -l /var/www/html/config.php.example
+          fi
+
   validate-docker-compose:
     name: Validate Docker Compose
     runs-on: ubuntu-latest
