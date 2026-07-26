@@ -16,6 +16,7 @@ trap cleanup ERR INT TERM
 # Load system environment variables
 if [ -f /home/cormac/docker/.env ]; then
     set -a
+    # shellcheck disable=SC1091
     source /home/cormac/docker/.env
     set +a
 fi
@@ -37,7 +38,7 @@ sudo docker exec -u www-data "$NC_CONTAINER" php occ maintenance:mode --on
 logit "[2/5] Exporting Database Dump..."
 SUFX=$(date +%F)
 CURRENT_SQL_BACKUP="$NC_BACKUP_DIR/db_backup_${SUFX}.sql"
-sudo docker exec -i "$NC_DB_CONTAINER" /usr/bin/mysqldump --defaults-extra-file=/etc/mysql/conf.d/nextcloud-db.cnf nextcloud > "$CURRENT_SQL_BACKUP"
+sudo docker exec -i "$NC_DB_CONTAINER" /usr/bin/mysqldump --defaults-extra-file=/etc/mysql/conf.d/nextcloud-db.cnf nextcloud | sudo tee "$CURRENT_SQL_BACKUP" > /dev/null
 
 # Prune local copies older than 3 days
 find "$NC_BACKUP_DIR" -name "db_backup_*.sql" -mtime +3 -delete
