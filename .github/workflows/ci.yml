@@ -39,6 +39,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Ensure baseline files exist for testing
+        run: |
+          touch ${{ github.workspace }}/app-data/homeassistant/automations.yaml
+          touch ${{ github.workspace }}/app-data/homeassistant/scripts.yaml
+          touch ${{ github.workspace }}/app-data/homeassistant/scenes.yaml
+
       - name: Test HA Configuration Syntax
         run: |
           docker run --rm \

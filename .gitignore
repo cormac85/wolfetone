@@ -11,3 +11,10 @@ secrets/*
 # other
 # diff.txt i use to put diffs for sharing with agents
 diff.txt 
+
+# HA ignores
+app-data/homeassistant/*.db*
+app-data/homeassistant/*.log*
+app-data/homeassistant/tts/
+app-data/homeassistant/backups/
+app-data/homeassistant/cloudedge_session_cache_*
