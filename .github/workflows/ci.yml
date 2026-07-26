@@ -19,6 +19,23 @@ jobs:
         with:
           scandir: './scripts'
 
+  validate-crontab:
+    name: Validate Crontab Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Crontab File Format
+        run: |
+          if [ -f "./scripts/crontab.txt" ]; then
+            crontab -n ./scripts/crontab.txt || true
+            # Or use a basic awk/grep check to ensure cron format fields are valid
+            while read -r line; [[ -n "$line" ]] && [[ ! "$line" =~ ^# ]]; do
+              echo "$line" | awk '{if (NF < 6) {print "Invalid cron line: " $0; exit 1}}'
+            done < ./scripts/crontab.txt
+          fi
+
   validate-nextcloud-scripts:
     name: Lint Nextcloud Scripts
     runs-on: ubuntu-latest
