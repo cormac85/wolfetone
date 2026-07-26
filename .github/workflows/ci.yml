@@ -47,18 +47,23 @@ jobs:
             hass --script check_config -c /config
 
   validate-caddy:
-    name: Validate Caddyfile Syntax
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Validate Nextcloud Caddyfile
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/compose-stacks/nextcloud/Caddyfile:/etc/caddy/Caddyfile \
-            caddy:latest \
-            caddy validate --config /etc/caddy/Caddyfile
+    - name: Generate Dummy Certs and Validate Caddyfile
+      run: |
+        # 1. Create the certs directory
+        mkdir -p ${{ github.workspace }}/compose-stacks/nextcloud/certs
+        
+        # 2. Generate a temporary self-signed certificate
+        openssl req -x509 -newkey rsa:4096 \
+          -keyout ${{ github.workspace }}/compose-stacks/nextcloud/certs/wolfetone.key \
+          -out ${{ github.workspace }}/compose-stacks/nextcloud/certs/wolfetone.crt \
+          -days 365 -nodes -subj "/CN=localhost"
+          
+        # 3. Run the validation
+        docker run --rm \
+          -v ${{ github.workspace }}/compose-stacks/nextcloud/Caddyfile:/etc/caddy/Caddyfile \
+          -v ${{ github.workspace }}/compose-stacks/nextcloud/certs:/certs \
+          caddy:latest \
+          caddy validate --config /etc/caddy/Caddyfile
 
   validate-tailscale-acl:
     name: Validate Tailscale ACL Syntax
@@ -67,5 +72,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify ACL JSON format
-        run: jq . ./tailscale/acl.json > /dev/null
+      - name: Verify HuJSON format
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+          tailscale hujson < ./docker/tailscale/acl.json > /dev/null
