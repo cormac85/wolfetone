@@ -81,4 +81,4 @@ jobs:
       - name: Verify HuJSON format
         run: |
           curl -fsSL https://tailscale.com/install.sh | sh
-          tailscale hujson < ./docker/tailscale/acl.json > /dev/null
+          tailscale hujson < ./tailscale/acl.json > /dev/null
