@@ -9,6 +9,7 @@ ENV_FILE="/etc/environment"
 if [ -f "$ENV_FILE" ]; then
     # Sourcing with allexport handles spaces in values cleaner than xargs grep
     set -a
+    # shellcheck disable=SC1090
     source "$ENV_FILE"
     set +a
 fi
