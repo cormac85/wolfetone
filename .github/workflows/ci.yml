@@ -71,14 +71,33 @@ jobs:
             caddy:latest \
             caddy validate --config /etc/caddy/Caddyfile
 
-  validate-tailscale-acl:
+validate-tailscale-acl:
     name: Validate Tailscale ACL Syntax
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify HuJSON format
+      - name: Verify HuJSON / ACL Syntax
         run: |
-          curl -fsSL https://tailscale.com/install.sh | sh
-          tailscale hujson < ./tailscale/acl.json > /dev/null
+          python3 -c '
+          import re, json, sys
+
+          path = "./tailscale/acl.json"
+          with open(path, "r") as f:
+              content = f.read()
+
+          # Strip C-style // comments
+          content = re.sub(r"//.*", "", content)
+          # Strip C-style /* */ block comments
+          content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+          # Strip trailing commas before closing braces/brackets
+          content = re.sub(r",\s*([\]}])", r"\1", content)
+
+          try:
+              json.loads(content)
+              print("HuJSON syntax is valid!")
+          except Exception as e:
+              print(f"Invalid ACL JSON: {e}", file=sys.stderr)
+              sys.exit(1)
+          '
