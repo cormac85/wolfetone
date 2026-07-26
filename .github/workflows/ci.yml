@@ -77,7 +77,7 @@ jobs:
             caddy:latest \
             caddy validate --config /etc/caddy/Caddyfile
 
-validate-tailscale-acl:
+  validate-tailscale-acl:
     name: Validate Tailscale ACL Syntax
     runs-on: ubuntu-latest
     steps:
