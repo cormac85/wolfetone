@@ -42,7 +42,7 @@ jobs:
       - name: Test HA Configuration Syntax
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/app-data/homeassistant:/config \
+            -v "${{ github.workspace }}/app-data/homeassistant:/config" \
             homeassistant/home-assistant:stable \
             hass --script check_config -c /config
 
