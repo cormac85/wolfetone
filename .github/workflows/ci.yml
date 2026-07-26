@@ -1,0 +1,139 @@
+name: Homelab CI Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  merge_group:
+    types: [ checks_requested ]
+
+jobs:
+  lint-scripts:
+    name: ShellCheck (Scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './scripts'
+
+  validate-nextcloud-scripts:
+    name: Lint Nextcloud Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck on Nextcloud setup scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './compose-stacks/nextcloud'
+
+  validate-nextcloud-config:
+    name: Validate Nextcloud PHP Config Templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lint PHP Syntax of Config Templates
+        run: |
+          if [ -f "./compose-stacks/nextcloud/config.php.example" ]; then
+            docker run --rm \
+              -v ${{ github.workspace }}/compose-stacks/nextcloud:/var/www/html \
+              php:cli \
+              php -l /var/www/html/config.php.example
+          fi
+
+  validate-docker-compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Home Assistant Compose
+        run: docker compose -f ./compose-stacks/homeassistant/docker-compose.yaml config -q
+
+      - name: Validate Nextcloud Compose
+        run: docker compose -f ./compose-stacks/nextcloud/docker-compose.yml config -q
+
+  validate-homeassistant:
+    name: Validate Home Assistant Config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure baseline files exist for testing
+        run: |
+          touch ${{ github.workspace }}/app-data/homeassistant/automations.yaml
+          touch ${{ github.workspace }}/app-data/homeassistant/scripts.yaml
+          touch ${{ github.workspace }}/app-data/homeassistant/scenes.yaml
+
+      - name: Test HA Configuration Syntax
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/app-data/homeassistant:/config" \
+            homeassistant/home-assistant:stable \
+            hass --script check_config -c /config
+
+  validate-caddy:
+    name: Validate Caddyfile Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Dummy Certs and Validate Caddyfile
+        run: |
+          # 1. Create the certs directory
+          mkdir -p ${{ github.workspace }}/compose-stacks/nextcloud/certs
+          
+          # 2. Generate a temporary self-signed certificate
+          openssl req -x509 -newkey rsa:4096 \
+            -keyout ${{ github.workspace }}/compose-stacks/nextcloud/certs/wolfetone.key \
+            -out ${{ github.workspace }}/compose-stacks/nextcloud/certs/wolfetone.crt \
+            -days 365 -nodes -subj "/CN=localhost"
+            
+          # 3. Run the validation
+          docker run --rm \
+            -v ${{ github.workspace }}/compose-stacks/nextcloud/Caddyfile:/etc/caddy/Caddyfile \
+            -v ${{ github.workspace }}/compose-stacks/nextcloud/certs:/certs \
+            caddy:latest \
+            caddy validate --config /etc/caddy/Caddyfile
+
+  validate-tailscale-acl:
+    name: Validate Tailscale ACL Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify HuJSON / ACL Syntax
+        run: |
+          python3 -c '
+          import re, json, sys
+
+          path = "./tailscale/acl.json"
+          with open(path, "r") as f:
+              content = f.read()
+
+          # Strip C-style // comments
+          content = re.sub(r"//.*", "", content)
+          # Strip C-style /* */ block comments
+          content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+          # Strip trailing commas before closing braces/brackets
+          content = re.sub(r",\s*([\]}])", r"\1", content)
+
+          try:
+              json.loads(content)
+              print("HuJSON syntax is valid!")
+          except Exception as e:
+              print(f"Invalid ACL JSON: {e}", file=sys.stderr)
+              sys.exit(1)
+          '
