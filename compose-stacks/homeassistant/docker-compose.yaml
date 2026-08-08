@@ -26,7 +26,7 @@ services:
     container_name: rtl_433
     restart: unless-stopped
     devices:
-      - /dev/bus/usb/001/006:/dev/bus/usb/001/006
+      - /dev/bus/usb
     command: '-f 868.3M -H 120 -F mqtt://mosquitto:1883,events=rtl_433[/model][/id]'
     depends_on:
       - mosquitto
