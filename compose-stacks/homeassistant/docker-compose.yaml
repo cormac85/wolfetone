@@ -27,6 +27,6 @@ services:
     restart: unless-stopped
     devices:
       - /dev/bus/usb
-    command: '-f 868.3M -Y classic -s 250k -R 0 -F mqtt://mosquitto:1883,events=rtl_433/raw'
+    command: '-f 868.3M -g 40 -Y classic -s 250k -R 0 -F mqtt://mosquitto:1883,events=rtl_433/raw'
     depends_on:
       - mosquitto
