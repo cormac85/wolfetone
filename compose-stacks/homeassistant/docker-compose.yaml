@@ -31,6 +31,6 @@ services:
     user: "0:0"
     devices:
       - /dev/bus/usb:/dev/bus/usb
-    command: -d 0 -f 868.3M -s 1024k -g 40 -p 1 -R 0 -X 'n=climote,m=FSK_PCM,s=488,l=488,r=4000,bits=172' -F mqtt://mosquitto:1883,events=rtl_433/raw
+    command: -d 0 -f 868.5M -s 1024k -g 40 -p 1 -R 0 -X 'n=climote,m=FSK_PCM,s=488,l=488,r=100000,bits=172' -F log
     depends_on:
       - mosquitto
