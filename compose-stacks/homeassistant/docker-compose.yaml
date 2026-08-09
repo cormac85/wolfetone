@@ -24,7 +24,7 @@ services:
     volumes:
       - ~/docker/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
   rtl_433:
-    image: hertzg/rtl_433:master
+    image: hertzg/rtl_433:master-debian
     container_name: rtl_433
     restart: unless-stopped
     privileged: true
