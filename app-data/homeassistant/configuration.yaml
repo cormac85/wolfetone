@@ -18,15 +18,26 @@ http:
 
 mqtt:
   sensor:
-    - name: "Climote Sensor Value"
+    - name: "Climote Raw NTC Decimal"
       state_topic: "rtl_433/raw"
-      # Ensure it only processes messages from your specific flex decoder
       value_template: >
-        {% if value_json.model == 'climote' %}
-          {# Adjust the [x:y] index to the exact position of your MSB/LSB in the hex string #}
-          {% set hex_val = value_json.data[4:8] %} 
-          {{ int(hex_val, 16) }}
+        {% if value_json.model == 'climote' and value_json.data is defined %}
+          {% set hex_str = value_json.data %}
+          
+          {# Ensure the payload is long enough to avoid indexing errors on junk frames #}
+          {% if hex_str | length >= 34 %}
+            {# Extract the '6' or '5' (Index 28) #}
+            {% set msb_nibble = hex_str[28] %}
+            
+            {# Extract the active byte e.g. 'd8', '1d' (Indices 32 and 33) #}
+            {% set lsb_byte = hex_str[32:34] %}
+            
+            {# Combine into a 3-character hex string (e.g., '61d') and convert to decimal #}
+            {% set combined_hex = msb_nibble ~ lsb_byte %}
+            {{ int(combined_hex, 16) }}
+          {% else %}
+            {{ states('sensor.climote_raw_ntc_decimal') }}
+          {% endif %}
         {% else %}
-          {{ states('sensor.climote_sensor_value') }}
+          {{ states('sensor.climote_raw_ntc_decimal') }}
         {% endif %}
-        
