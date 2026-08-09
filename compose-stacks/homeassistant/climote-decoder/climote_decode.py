@@ -15,7 +15,8 @@ C = -5.2472281758e-05
 MQTT_HOST = os.environ.get("MQTT_HOST", "mosquitto")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
 MQTT_TOPIC = "climote/sensor/state"
-
+MQTT_USER = os.environ.get("MQTT_USER", "")
+MQTT_PASS = os.environ.get("MQTT_PASS", "")
 
 def calculate_temperature(raw_adc):
     """Applies Steinhart-Hart equation to raw ADC value."""
@@ -31,13 +32,20 @@ def publish_data(raw_adc, temp_celsius):
         "temperature_c": round(temp_celsius, 2),
         "raw_adc": raw_adc
     }
+    
     print(f"Publishing to MQTT ({MQTT_HOST}:{MQTT_PORT}) -> {payload}")
+    
+    auth = None
+    if MQTT_USER and MQTT_PASS:
+        auth = {'username': MQTT_USER, 'password': MQTT_PASS}
+
     try:
         publish.single(
             topic=MQTT_TOPIC,
             payload=json.dumps(payload),
             hostname=MQTT_HOST,
-            port=MQTT_PORT
+            port=MQTT_PORT,
+            auth=auth
         )
     except Exception as e:
         print(f"MQTT Publish failed: {e}")
