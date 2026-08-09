@@ -145,7 +145,7 @@ def main():
             if os.path.exists(capture_file):
                 os.remove(capture_file)
                 
-        time.sleep(30)
+        time.sleep(17)  # Set odd wait time to avoid syncing on a fixed schedule with the Climote device
 
 
 if __name__ == "__main__":
