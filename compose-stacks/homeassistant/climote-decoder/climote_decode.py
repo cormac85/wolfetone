@@ -5,6 +5,7 @@ import numpy as np
 import re
 import json
 import paho.mqtt.publish as publish
+import traceback
 
 # Steinhart-Hart Constants
 A = -5.1166039831e-02
@@ -27,28 +28,35 @@ def calculate_temperature(raw_adc):
 
 
 def publish_data(raw_adc, temp_celsius):
-    """Publishes decoded data to the MQTT broker."""
+    print("--- MQTT Publish Attempt ---", flush=True)
     payload = {
         "temperature_c": round(temp_celsius, 2),
         "raw_adc": raw_adc
     }
     
-    print(f"Publishing to MQTT ({MQTT_HOST}:{MQTT_PORT}) -> {payload}")
+    print(f"Target: {MQTT_HOST}:{MQTT_PORT} | Topic: {MQTT_TOPIC}", flush=True)
+    print(f"Payload: {payload}", flush=True)
     
     auth = None
     if MQTT_USER and MQTT_PASS:
+        print(f"Auth: Using username '{MQTT_USER}'", flush=True)
         auth = {'username': MQTT_USER, 'password': MQTT_PASS}
-
+    else:
+        print("Auth: None (Anonymous)", flush=True)
+        
     try:
         publish.single(
             topic=MQTT_TOPIC,
             payload=json.dumps(payload),
             hostname=MQTT_HOST,
             port=MQTT_PORT,
-            auth=auth
+            auth=auth,
+            client_id="climote_decoder_script"
         )
+        print("MQTT Publish: SUCCESS", flush=True)
     except Exception as e:
-        print(f"MQTT Publish failed: {e}")
+        print(f"MQTT Publish: FAILED - {e}", flush=True)
+        traceback.print_exc()
 
 
 def decode_burst_bits(burst_sig, symbol_w):
@@ -84,15 +92,15 @@ def extract_telemetry(bit_str):
     
     byte_array = int(padded_bits, 2).to_bytes(len(padded_bits) // 8, byteorder='big')
     
-    if len(byte_array) >= 12:
+    if len(byte_array) >= 14:
         msb = (byte_array[11] >> 4) & 0x0F
         lsb = byte_array[13]
-        return_val = (msb << 8) | lsb
+        raw_adc = (msb << 8) | lsb
     else:
         print("Error: Extracted byte array is too short for expected telemetry data.")
-        return_val = None
+        raw_adc = None
     
-    return return_val
+    return raw_adc
 
 
 def process_capture_file(filename, symbol_w=510):
@@ -124,7 +132,7 @@ def process_capture_file(filename, symbol_w=510):
         
         if raw_adc is not None:
             temp_celsius = calculate_temperature(raw_adc)
-            print(f"Raw ADC: {raw_adc} | Calculated Temperature: {temp_celsius:.2f}°C")
+            print(f"Raw ADC: {raw_adc} | Calculated Temperature: {temp_celsius:.2f}°C", flush=True)
             publish_data(raw_adc, temp_celsius)
             return # Exit after first successful decode per capture to avoid duplicate MQTT spam
         else:
