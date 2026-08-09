@@ -23,14 +23,16 @@ services:
       - "1883:1883"
     volumes:
       - ~/docker/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-  rtl_433:
-    image: hertzg/rtl_433:master-debian
-    container_name: rtl_433
+  climote-decoder:
+    build:
+      context: ./climote-decoder
+    container_name: climote-decoder
     restart: unless-stopped
-    privileged: true
-    user: "0:0"
+    # Pass through the USB bus so the container can access the RTL-SDR dongle
     devices:
       - /dev/bus/usb:/dev/bus/usb
-    command: -d 0 -f 868.5M -s 1024k -g 40 -p 1 -R 0 -X 'n=climote,m=FSK_PCM,s=488,l=488,r=100000,bits=172' -F log
+    environment:
+      - MQTT_HOST=mosquitto # Matches your broker service name in compose
+      - MQTT_PORT=1883
     depends_on:
       - mosquitto
