@@ -13,3 +13,22 @@ services:
       - NET_RAW
     environment:
       - CADDY_TAILSCALE_IP=${TAILSCALE_WOLFETONE_IP}
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ~/docker/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+  rtl_433:
+    image: hertzg/rtl_433:master
+    container_name: rtl_433
+    restart: unless-stopped
+    privileged: true
+    user: "0:0"
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    command: -d 0 -f 868.3M -s 1024k -g 30 -p 1 -R 0 -A -F log
+    depends_on:
+      - mosquitto
