@@ -84,9 +84,15 @@ def extract_telemetry(bit_str):
     
     byte_array = int(padded_bits, 2).to_bytes(len(padded_bits) // 8, byteorder='big')
     
-    msb = (byte_array[11] >> 4) & 0x0F
-    lsb = byte_array[13]
-    return (msb << 8) | lsb
+    if len(byte_array) >= 12:
+        msb = (byte_array[11] >> 4) & 0x0F
+        lsb = byte_array[13]
+        return_val = (msb << 8) | lsb
+    else:
+        print("Error: Extracted byte array is too short for expected telemetry data.")
+        return_val = None
+    
+    return return_val
 
 
 def process_capture_file(filename, symbol_w=510):
