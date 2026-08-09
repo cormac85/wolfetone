@@ -5,7 +5,7 @@ services:
     volumes:
       - ../../app-data/homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
-      - /run/dbsus:/run/dbus:ro
+      - /run/dbus:/run/dbus:ro
     restart: unless-stopped
     privileged: true
     network_mode: host
