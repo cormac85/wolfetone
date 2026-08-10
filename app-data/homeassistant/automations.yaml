@@ -1,0 +1,9 @@
+- alias: "Climote Action Trigger"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.climote_sensor_value
+      above: 10 # Example threshold based on your decoded MSB/LSB calculation
+  action:
+    - service: persistent_notification.create
+      data:
+        message: "Climote sensor exceeded threshold."
