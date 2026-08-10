@@ -19,6 +19,7 @@ http:
 mqtt:
   sensor:
     - name: "Climote Temperature"
+      unique_id: "climote_temperature_sensor_01"
       state_topic: "climote/sensor/state"
       unit_of_measurement: "°C"
       icon: mdi:thermometer-auto
@@ -28,7 +29,7 @@ mqtt:
       value_template: >
         {% set temp = value_json.temperature_c | float(-999) %}
         {% if 0 < temp < 50 %}
-          {{ temp }}
+          {{ temp  | round(0)}}
         {% else %}
           {{ states('sensor.climote_temperature') }}
         {% endif %}
@@ -36,6 +37,7 @@ mqtt:
 template:
   - sensor:
       - name: "Climote Signal Age"
+        unique_id: "climote_temperature_signal_age_01_"
         unit_of_measurement: "minutes"
         icon: mdi:clock-fast
         state: >
