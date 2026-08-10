@@ -19,7 +19,7 @@ MQTT_TOPIC = "climote/sensor/state"
 MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASS = os.environ.get("MQTT_PASS", "")
 
-def calculate_temperature(raw_adc):
+def calculate_temperature(raw_adc: int):
     """Applies Steinhart-Hart equation to raw ADC value."""
     ln_adc = np.log(np.maximum(raw_adc, 1e-6))
     inv_kelvin = A + (B * ln_adc) + (C * (ln_adc ** 3))
@@ -27,7 +27,7 @@ def calculate_temperature(raw_adc):
     return temp_kelvin - 273.15
 
 
-def publish_data(raw_adc, temp_celsius):
+def publish_data(raw_adc: int, temp_celsius: float):
     print("--- MQTT Publish Attempt ---", flush=True)
     payload = {
         "temperature_c": round(temp_celsius, 2),
@@ -60,7 +60,7 @@ def publish_data(raw_adc, temp_celsius):
         traceback.print_exc()
 
 
-def decode_burst_bits(burst_sig, symbol_w):
+def decode_burst_bits(burst_sig: complex, symbol_w: int):
     """Demodulates FM signal into a binary string."""
     phase = np.unwrap(np.angle(burst_sig))
     demod = np.diff(phase)
@@ -76,7 +76,7 @@ def decode_burst_bits(burst_sig, symbol_w):
     return "".join(bits)
 
 
-def extract_telemetry(bit_str):
+def extract_telemetry(bit_str: str):
     """Finds preamble/sync, aligns frame, and extracts ADC value."""
     sync_bin = "001011011101010000001011"
     pattern = re.compile(r'((?:10){4,}|(?:01){4,})(' + sync_bin + ')')
@@ -104,7 +104,7 @@ def extract_telemetry(bit_str):
     return raw_adc
 
 
-def process_capture_file(filename, symbol_w=510):
+def process_capture_file(filename: str, symbol_w: int =510):
     """Reads raw I/Q data and iterates over detected RF bursts."""
     print(f"Reading {filename}...")
     with open(filename, "rb") as f:
@@ -140,7 +140,7 @@ def process_capture_file(filename, symbol_w=510):
             print("Could not locate composite preamble+sync pattern.")
 
 
-def capture_rf(capture_file):
+def capture_rf(capture_file: str):
     """Executes rtl_sdr to record RF data."""
     print("\nCapturing RF data...")
     subprocess.run([

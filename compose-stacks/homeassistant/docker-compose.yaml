@@ -33,7 +33,7 @@ services:
     devices:
       - /dev/bus/usb:/dev/bus/usb
     environment:
-      - MQTT_HOST=mosquitto # Matches your broker service name in compose
+      - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
     depends_on:
       - mosquitto
