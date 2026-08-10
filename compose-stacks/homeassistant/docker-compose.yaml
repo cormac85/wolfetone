@@ -28,6 +28,7 @@ services:
       context: ./climote-decoder
     container_name: climote-decoder
     restart: unless-stopped
+    privileged: true
     # Pass through the USB bus so the container can access the RTL-SDR dongle
     devices:
       - /dev/bus/usb:/dev/bus/usb
