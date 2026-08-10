@@ -52,7 +52,7 @@ def publish_data(raw_adc, temp_celsius):
             port=MQTT_PORT,
             auth=auth,
             client_id="climote_decoder_script",
-            retain=True,
+            retain=True
         )
         print("MQTT Publish: SUCCESS", flush=True)
     except Exception as e:
