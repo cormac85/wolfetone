@@ -21,6 +21,7 @@ mqtt:
     - name: "Climote Temperature"
       state_topic: "climote/sensor/state"
       unit_of_measurement: "°C"
+      icon: mdi:thermometer-auto
       device_class: "temperature"
       state_class: "measurement"
       force_update: true
@@ -31,3 +32,16 @@ mqtt:
         {% else %}
           {{ states('sensor.climote_temperature') }}
         {% endif %}
+
+template:
+  - sensor:
+      - name: "Climote Signal Age"
+        unit_of_measurement: "minutes"
+        icon: mdi:clock-fast
+        state: >
+          {% set entity_id = 'sensor.climote_temperature' %}
+          {% if states[entity_id] is not none and states[entity_id].last_updated is not none %}
+            {{ ((now() - states[entity_id].last_updated).total_seconds() / 60) | round(1) }}
+          {% else %}
+            unknown
+          {% endif %}
