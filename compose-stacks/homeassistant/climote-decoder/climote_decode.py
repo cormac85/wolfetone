@@ -150,7 +150,7 @@ def capture_rf(capture_file: str):
         "-n", "2048000",
         "-g", "40",
         capture_file
-    ], check=True)
+    ], check=True, timeout=10)
 
 
 def main():
