@@ -18,3 +18,7 @@ app-data/homeassistant/*.log*
 app-data/homeassistant/tts/
 app-data/homeassistant/backups/
 app-data/homeassistant/cloudedge_session_cache_*
+
+# python stuff
+__pycache__/
+.venv

@@ -7,7 +7,7 @@ import json
 import paho.mqtt.publish as publish
 import traceback
 
-# Steinhart-Hart Constants
+# Steinhart-Hart Constants (Climote)
 A = -5.1166039831e-02
 B = 1.0255677487e-02
 C = -5.2472281758e-05
@@ -15,9 +15,40 @@ C = -5.2472281758e-05
 # MQTT Configuration
 MQTT_HOST = os.environ.get("MQTT_HOST", "mosquitto")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
-MQTT_TOPIC = "climote/sensor/state"
+MQTT_TOPIC_CLIMOTE = os.environ.get("MQTT_TOPIC_CLIMOTE", "climote/sensor/state")
+MQTT_TOPIC_WATCHMAN = os.environ.get("MQTT_TOPIC_WATCHMAN", "watchman/sensor/state")
 MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASS = os.environ.get("MQTT_PASS", "")
+
+
+def publish_mqtt(topic: str, payload: dict):
+    """Unified MQTT publish function."""
+    print(f"--- MQTT Publish Attempt [{topic}] ---", flush=True)
+    print(f"Target: {MQTT_HOST}:{MQTT_PORT} | Payload: {payload}", flush=True)
+    
+    auth = None
+    if MQTT_USER and MQTT_PASS:
+        auth = {'username': MQTT_USER, 'password': MQTT_PASS}
+        
+    try:
+        publish.single(
+            topic=topic,
+            payload=json.dumps(payload),
+            hostname=MQTT_HOST,
+            port=MQTT_PORT,
+            auth=auth,
+            client_id="climote_watchman_decoder",
+            retain=True
+        )
+        print("MQTT Publish: SUCCESS", flush=True)
+    except Exception as e:
+        print(f"MQTT Publish: FAILED - {e}", flush=True)
+        traceback.print_exc()
+
+
+# ==========================================
+# CLIMOTE DECODER LOGIC (868.5 MHz)
+# ==========================================
 
 def calculate_temperature(raw_adc: int):
     """Applies Steinhart-Hart equation to raw ADC value."""
@@ -25,39 +56,6 @@ def calculate_temperature(raw_adc: int):
     inv_kelvin = A + (B * ln_adc) + (C * (ln_adc ** 3))
     temp_kelvin = 1.0 / inv_kelvin
     return temp_kelvin - 273.15
-
-
-def publish_data(raw_adc: int, temp_celsius: float):
-    print("--- MQTT Publish Attempt ---", flush=True)
-    payload = {
-        "temperature_c": round(temp_celsius, 2),
-        "raw_adc": raw_adc
-    }
-    
-    print(f"Target: {MQTT_HOST}:{MQTT_PORT} | Topic: {MQTT_TOPIC}", flush=True)
-    print(f"Payload: {payload}", flush=True)
-    
-    auth = None
-    if MQTT_USER and MQTT_PASS:
-        print(f"Auth: Using username '{MQTT_USER}'", flush=True)
-        auth = {'username': MQTT_USER, 'password': MQTT_PASS}
-    else:
-        print("Auth: None (Anonymous)", flush=True)
-        
-    try:
-        publish.single(
-            topic=MQTT_TOPIC,
-            payload=json.dumps(payload),
-            hostname=MQTT_HOST,
-            port=MQTT_PORT,
-            auth=auth,
-            client_id="climote_decoder_script",
-            retain=True
-        )
-        print("MQTT Publish: SUCCESS", flush=True)
-    except Exception as e:
-        print(f"MQTT Publish: FAILED - {e}", flush=True)
-        traceback.print_exc()
 
 
 def decode_burst_bits(burst_sig: complex, symbol_w: int):
@@ -104,9 +102,9 @@ def extract_telemetry(bit_str: str):
     return raw_adc
 
 
-def process_capture_file(filename: str, symbol_w: int =510):
+def process_capture_file(filename: str, symbol_w: int = 510):
     """Reads raw I/Q data and iterates over detected RF bursts."""
-    print(f"Reading {filename}...")
+    print(f"Reading {filename}...", flush=True)
     with open(filename, "rb") as f:
         raw = np.fromfile(f, dtype=np.uint8)
     
@@ -117,14 +115,14 @@ def process_capture_file(filename: str, symbol_w: int =510):
     threshold = 100.0
     active_indices = np.where(power > threshold)[0]
     if len(active_indices) == 0:
-        print("No active bursts found.")
+        print("No active bursts found.", flush=True)
         return
 
     gap_indices = np.where(np.diff(active_indices) > 10000)[0]
     burst_starts = [active_indices[0]] + [active_indices[idx + 1] for idx in gap_indices]
     
     for i, burst_start in enumerate(burst_starts[:5]):
-        print(f"--- Processing Burst {i+1} at index {burst_start} ---")
+        print(f"--- Processing Burst {i+1} at index {burst_start} ---", flush=True)
         window_start = max(0, burst_start - 1000)
         burst_sig = complex_sig[window_start : window_start + 120000]
         
@@ -134,15 +132,19 @@ def process_capture_file(filename: str, symbol_w: int =510):
         if raw_adc is not None:
             temp_celsius = calculate_temperature(raw_adc)
             print(f"Raw ADC: {raw_adc} | Calculated Temperature: {temp_celsius:.2f}°C", flush=True)
-            publish_data(raw_adc, temp_celsius)
-            return # Exit after first successful decode per capture to avoid duplicate MQTT spam
+            payload = {
+                "temperature_c": round(temp_celsius, 2),
+                "raw_adc": raw_adc
+            }
+            publish_mqtt(MQTT_TOPIC_CLIMOTE, payload)
+            return  # Exit after first successful decode per capture
         else:
-            print("Could not locate composite preamble+sync pattern.")
+            print("Could not locate composite preamble+sync pattern.", flush=True)
 
 
-def capture_rf(capture_file: str):
-    """Executes rtl_sdr to record RF data."""
-    print("\nCapturing RF data...")
+def capture_climote(capture_file: str):
+    """Executes rtl_sdr to record 868.5MHz RF data."""
+    print("\n[Climote] Capturing 868.5MHz RF data...", flush=True)
     subprocess.run([
         "rtl_sdr",
         "-f", "868500000",
@@ -153,22 +155,80 @@ def capture_rf(capture_file: str):
     ], check=True, timeout=10)
 
 
+# ==========================================
+# WATCHMAN LISTENER LOGIC (433.92 MHz)
+# ==========================================
+
+def listen_watchman(duration_secs: int = 720):
+    """Listens for Watchman bursts via rtl_433 on 433.92MHz."""
+    print(f"\n[Watchman] Listening on 433.92MHz for {duration_secs}s...", flush=True)
+    cmd = [
+        "rtl_433",
+        "-f", "433.92M",
+        "-R", "43",  # Watchman / Oil-Sonic Protocol
+        "-F", "json",
+        "-T", str(duration_secs)
+    ]
+    
+    proc = None
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        for line in proc.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+                print(f"[Watchman] Signal Captured: {data}", flush=True)
+                publish_mqtt(MQTT_TOPIC_WATCHMAN, data)
+            except json.JSONDecodeError:
+                pass
+            except Exception as e:
+                print(f"[Watchman] Processing error: {e}", flush=True)
+                
+        proc.wait(timeout=duration_secs + 10)
+    except subprocess.TimeoutExpired:
+        if proc:
+            proc.kill()
+    except Exception as e:
+        print(f"[Watchman] Subprocess error: {e}", flush=True)
+
+
+# ==========================================
+# MAIN MACRO LOOP
+# ==========================================
+
 def main():
     capture_file = "/tmp/climote_capture.cu8"
     
     while True:
+        print("\n==================================================", flush=True)
+        print("Starting 15-Minute Macro Cycle", flush=True)
+        print("==================================================", flush=True)
+        
+        # 1. Climote Capture & Decode
         try:
-            capture_rf(capture_file)
+            capture_climote(capture_file)
             process_capture_file(capture_file)
+        except subprocess.TimeoutExpired:
+            print("[Climote] Hardware capture timed out.", flush=True)
         except subprocess.CalledProcessError as e:
-            print(f"Hardware capture failed: {e}")
+            print(f"[Climote] Hardware capture failed: {e}", flush=True)
         except Exception as e:
-            print(f"Processing error: {e}")
+            print(f"[Climote] Processing error: {e}", flush=True)
         finally:
             if os.path.exists(capture_file):
                 os.remove(capture_file)
                 
-        time.sleep(17)  # Set odd wait time to avoid syncing on a fixed schedule with the Climote device
+        # Settle Tuner PLL
+        time.sleep(2)
+        
+        # 2. Watchman Listening Window (12 Minutes)
+        listen_watchman(duration_secs=720)
+        
+        # 3. Rest Window (2 Minutes) to avoid USB bus fatigue and lower duty cycle
+        print("\n[Bus Rest] Cooling down USB interface for 118s...", flush=True)
+        time.sleep(118)
 
 
 if __name__ == "__main__":
