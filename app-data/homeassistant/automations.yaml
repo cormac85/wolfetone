@@ -1,0 +1,38 @@
+- id: '1786903963195'
+  alias: Phone is Home Notification Test
+  description: ''
+  triggers:
+  - trigger: zone.entered
+    target:
+      entity_id: device_tracker.pixel_7
+    options:
+      behavior: each
+      for: 00:00:00
+      zone: zone.home
+  conditions: []
+  actions:
+  - action: notify.mobile_app_pixel_7
+    metadata: {}
+    data:
+      message: Pixel 7 is Home
+      title: Zone Testing
+  mode: single
+- id: '1786922484312'
+  alias: Brother Toner Low
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.mfc_l3710cw_black_toner_remaining
+    - sensor.mfc_l3710cw_magenta_toner_remaining
+    - sensor.mfc_l3710cw_yellow_toner_remaining
+    - sensor.mfc_l3710cw_cyan_toner_remaining
+    below: 10
+  conditions: []
+  actions:
+  - action: notify.mobile_app_pixel_7
+    metadata: {}
+    data:
+      title: ⚠️ Toner Low! ⚠️
+      message: '{{ trigger.to_state.name }} is at {{ trigger.to_state.state }}%'
+  mode: single
