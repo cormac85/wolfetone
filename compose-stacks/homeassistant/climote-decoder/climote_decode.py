@@ -38,7 +38,7 @@ def publish_mqtt(topic: str, payload: dict):
             port=MQTT_PORT,
             auth=auth,
             client_id="climote_watchman_decoder",
-            retain=True
+            retain=False
         )
         print("MQTT Publish: SUCCESS", flush=True)
     except Exception as e:
