@@ -2,6 +2,11 @@
 wolfetone.tailee21f7.ts.net {
 	tls /certs/wolfetone.crt /certs/wolfetone.key
 	reverse_proxy app:80
+	# Nextcloud auto-discovery endpoints
+    redir /.well-known/carddav /remote.php/dav 301
+    redir /.well-known/caldav /remote.php/dav 301
+    redir /.well-known/webfinger /index.php/.well-known/webfinger 301
+    redir /.well-known/nodeinfo /index.php/.well-known/nodeinfo 301
 }
 
 # Route 2: ntfy (HTTPS on 8081)
