@@ -37,6 +37,9 @@ NC_DB_CONTAINER="nextcloud-db"
 ```
 *Force reload the environment with `source /etc/environment`.*
 
+### Docker secret files
+Create `secrets/db_user.txt`, `db_database.txt`, `db_password.txt` and `db_root_password.txt` (mode `600`, gitignored). Each file holds **only the bare value** (e.g. `nextcloud`, not `echo "nextcloud"`), because MariaDB and Nextcloud read them verbatim via the `MYSQL_*_FILE` variables. They only take effect when a database is first created: on an existing database the live passwords are the ones in MariaDB and in `app-data/nextcloud/html/config/config.php` (`dbpassword`), so to change a password update all of those plus `/etc/nextcloud-db.cnf` together. Keep the real values in the password manager.
+
 ### Database Credentials
 Create the secure native MariaDB credential file on the host. This file is mounted read-only into the database container for secure `mysqldump` execution.
 
