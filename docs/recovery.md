@@ -90,7 +90,7 @@ sudo borgmatic list
 sudo borgmatic info
 ```
 
-**What is and is not backed up.** Borg only sends `/mnt/backups/nextcloud` (the Nextcloud DB dumps and file snapshot). **Not backed up:** Home Assistant data (`app-data/homeassistant`), Mosquitto data/volumes, ntfy cache, the HTTPS cert, and host config (`/etc/borgmatic`, `/etc/nextcloud-db.cnf`, `secrets/`, SSH keys). Those secrets are meant to live in the password manager. Adding `app-data/homeassistant` to `source_directories` in `/etc/borgmatic/config.yaml` would cover Home Assistant.
+**What is and is not backed up.** Borg sends two things: `/mnt/backups/nextcloud` (the Nextcloud DB dumps and file snapshot) and `app-data/homeassistant` (users/auth in `.storage`, integrations, `zigbee.db`, `custom_components`, blueprints, `secrets.yaml`, and HA's own `backups/`). From Home Assistant it deliberately **excludes** the recorder history (`home-assistant_v2.db*`, constantly written so a live copy can be inconsistent, and expendable), logs, `tts`, `.cache` and `deps`; see `exclude_patterns` in `system-configs/borg-config-template.yaml`. **Not backed up:** Mosquitto data (abandoned project), ntfy cache, the HTTPS cert, and host config (`/etc/borgmatic`, `/etc/nextcloud-db.cnf`, `secrets/`, SSH keys). Those secrets are meant to live in the password manager.
 
 Restore (use a scratch directory, never straight over live data):
 
@@ -113,7 +113,7 @@ Order, if the laptop dies or you re-image it:
 4. Restore the backup (§5) **before** first start of a fresh DB, so MariaDB doesn't initialise an empty one over the top.
 5. Install the cron jobs with `scripts/crontab_setup.sh` and the systemd override with `scripts/deploy.sh`.
 6. Renew the HTTPS cert: `docs/cert-rotation.md`.
-7. Home Assistant: **it is not in the borg backup** (see §5). Only `configuration.yaml` and `automations.yaml` are in git; the rest of `app-data/homeassistant` (users, integrations, history) is lost with the disk unless you copied it elsewhere. Re-onboard HA and re-add the Brother printer, Climote MQTT and Pixel integrations by hand.
+7. Home Assistant: restore `app-data/homeassistant` from the borg archive (`borgmatic extract --archive latest --path home/cormac/docker/app-data/homeassistant` into a scratch directory, then copy into place with the container stopped). Recorder history is not backed up, so the history graphs start empty.
 
 ## 7. Quarterly checklist (10 minutes)
 
