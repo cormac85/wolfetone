@@ -3,8 +3,16 @@ set -e
 
 echo "--- Setting up Server Cron Jobs ---"
 
+# The "user" crontab belongs to the person who ran this script, even when run via sudo.
+# (A plain `crontab` under sudo would edit root's crontab and duplicate the job there.)
+TARGET_USER="${SUDO_USER:-$USER}"
+if [ "$TARGET_USER" = "root" ]; then
+    echo "Run this as your normal user (it uses sudo where needed), not as root." >&2
+    exit 1
+fi
+
 # Define the jobs
-ROOT_JOB="0 23 * * 0 /home/cormac/docker/scripts/maintain.sh >> /var/log/nextcloud-maintain.log 2>&1"
+ROOT_JOB="0 23 * * * /home/cormac/docker/scripts/maintain.sh >> /var/log/nextcloud-maintain.log 2>&1"
 CERT_JOB="0 4 * * 1 /home/cormac/docker/scripts/renew_certs.sh >> /var/log/cert-renew.log 2>&1"
 USER_JOB="*/5 * * * * docker exec -u www-data nextcloud-app php -f /var/www/html/cron.php"
 
@@ -28,12 +36,12 @@ else
 fi
 
 # 2. Setup User Cron (Nextcloud Background Tasks)
-echo "Checking cormac crontab for Nextcloud scheduler..."
-if crontab -l 2>/dev/null | grep -Fq "cron.php"; then
+echo "Checking $TARGET_USER crontab for Nextcloud scheduler..."
+if sudo crontab -u "$TARGET_USER" -l 2>/dev/null | grep -Fq "cron.php"; then
     echo "Nextcloud user job already exists. Skipping."
 else
     echo "Adding Nextcloud user job..."
-    (crontab -l 2>/dev/null; echo "$USER_JOB") | crontab -
+    (sudo crontab -u "$TARGET_USER" -l 2>/dev/null; echo "$USER_JOB") | sudo crontab -u "$TARGET_USER" -
     echo "Nextcloud user job added successfully."
 fi
 
