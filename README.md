@@ -11,6 +11,13 @@ This repository contains the infrastructure-as-code and maintenance scripts for 
 
 ---
 
+## Further documentation
+
+*   [`docs/recovery.md`](docs/recovery.md): where each credential lives and how to recover from a lost password, key or host.
+*   [`docs/cert-rotation.md`](docs/cert-rotation.md): the Tailscale/Let's Encrypt HTTPS cert (renewed every 90 days) and its renewal script.
+
+---
+
 ## 1. Prerequisites
 
 To deploy this setup on a fresh Ubuntu host, install the following dependencies:
@@ -36,6 +43,9 @@ NC_CONTAINER="nextcloud-app"
 NC_DB_CONTAINER="nextcloud-db"
 ```
 *Force reload the environment with `source /etc/environment`.*
+
+### Docker secret files
+Create `secrets/db_user.txt`, `db_database.txt`, `db_password.txt` and `db_root_password.txt` (mode `600`, gitignored). Each file holds **only the bare value** (e.g. `nextcloud`, not `echo "nextcloud"`), because MariaDB and Nextcloud read them verbatim via the `MYSQL_*_FILE` variables. They only take effect when a database is first created: on an existing database the live passwords are the ones in MariaDB and in `app-data/nextcloud/html/config/config.php` (`dbpassword`), so to change a password update all of those plus `/etc/nextcloud-db.cnf` together. Keep the real values in the password manager.
 
 ### Database Credentials
 Create the secure native MariaDB credential file on the host. This file is mounted read-only into the database container for secure `mysqldump` execution.

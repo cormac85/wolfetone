@@ -5,6 +5,7 @@ echo "--- Setting up Server Cron Jobs ---"
 
 # Define the jobs
 ROOT_JOB="0 23 * * 0 /home/cormac/docker/scripts/maintain.sh >> /var/log/nextcloud-maintain.log 2>&1"
+CERT_JOB="0 4 * * 1 /home/cormac/docker/scripts/renew_certs.sh >> /var/log/cert-renew.log 2>&1"
 USER_JOB="*/5 * * * * docker exec -u www-data nextcloud-app php -f /var/www/html/cron.php"
 
 # 1. Setup Root Cron (Maintenance)
@@ -15,6 +16,15 @@ else
     echo "Adding root maintenance job..."
     (sudo crontab -l 2>/dev/null; echo "$ROOT_JOB") | sudo crontab -
     echo "Root job added successfully."
+fi
+
+echo "Checking root crontab for certificate renewal script..."
+if sudo crontab -l 2>/dev/null | grep -Fq "/home/cormac/docker/scripts/renew_certs.sh"; then
+    echo "Root cert renewal job already exists. Skipping."
+else
+    echo "Adding root cert renewal job..."
+    (sudo crontab -l 2>/dev/null; echo "$CERT_JOB") | sudo crontab -
+    echo "Root cert renewal job added successfully."
 fi
 
 # 2. Setup User Cron (Nextcloud Background Tasks)
