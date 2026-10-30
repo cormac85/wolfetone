@@ -11,6 +11,13 @@ This repository contains the infrastructure-as-code and maintenance scripts for 
 
 ---
 
+## Further documentation
+
+*   [`docs/recovery.md`](docs/recovery.md): where each credential lives and how to recover from a lost password, key or host.
+*   [`docs/cert-rotation.md`](docs/cert-rotation.md): the Tailscale/Let's Encrypt HTTPS cert (renewed every 90 days) and its renewal script.
+
+---
+
 ## 1. Prerequisites
 
 To deploy this setup on a fresh Ubuntu host, install the following dependencies:
