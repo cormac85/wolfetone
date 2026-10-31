@@ -86,3 +86,4 @@ If the local copy is gone, restore from the HA backup tar (Settings > System > B
 
 | Date | From | To | Notes |
 |---|---|---|---|
+| 2026-10-30 | 2026.7.2 | 2026.10.4 | Skipped 2026.8 and 2026.9; no affected integrations. Clean start, no errors in the log, custom-integration "not tested" warnings only. Image pull took ~25 min on a slow link, so pull ahead of time. |

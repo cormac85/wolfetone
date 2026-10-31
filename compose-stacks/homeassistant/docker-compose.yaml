@@ -1,7 +1,8 @@
 services:
   homeassistant:
     container_name: homeassistant
-    image: "ghcr.io/home-assistant/home-assistant:stable"
+    # Pinned on purpose (not :stable); upgrade by hand, see docs/home-assistant-upgrade.md
+    image: "ghcr.io/home-assistant/home-assistant:2026.10.4"
     volumes:
       - ../../app-data/homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
