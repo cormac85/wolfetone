@@ -9,13 +9,6 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 127.0.0.1
-    - 100.83.211.123
-    - 172.16.0.0/12  # docker subnet
-
 mqtt:
   sensor:
     - name: "Climote Temperature"

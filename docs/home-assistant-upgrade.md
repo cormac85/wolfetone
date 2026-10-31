@@ -82,6 +82,10 @@ If the local copy is gone, restore from the HA backup tar (Settings > System > B
 - Add a row to the log below.
 - Aim to be no more than two releases behind (see the quarterly checklist in `docs/recovery.md`).
 
+## Settings that moved out of YAML
+
+- **HTTP / reverse proxy (2026.10):** the `http:` block in `configuration.yaml` is gone. HA imported `use_x_forwarded_for` and `trusted_proxies` (127.0.0.1, the Tailscale/Caddy IP, the docker subnet) into its own storage (`.storage/http`, not in git) and manages them under Settings > System > Network. They are covered by the HA backup and borg, but are not visible in the repo. If you rebuild HA without a restore and see "400 Bad Request ... X-Forwarded-For" through Caddy on `:8443`, re-enter the trusted proxies there.
+
 ## Upgrade log
 
 | Date | From | To | Notes |
