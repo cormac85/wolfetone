@@ -20,7 +20,7 @@ Keep the real values in the password manager (NordPass). Entry names below are s
 | Borg repo passphrase | NordPass: `borg wolfetone repo` | `/etc/borgmatic/config.yaml` (`encryption_passphrase`) | §5. The repo is `repokey` mode: the key is inside the repo, so the passphrase alone is enough. |
 | Borg SSH key to datashank (no passphrase) | NordPass secure note | `/root/.ssh/backup` | Make a new key, add its `.pub` to `~cormac/.ssh/authorized_keys` on datashank |
 | GitHub deploy key (read-only, no passphrase) | not needed | `~/.ssh/github_deploy` | Generate a new one, add under repo Settings → Deploy keys |
-| Home Assistant login | NordPass / browser | `app-data/homeassistant/.storage` | `hass --script auth` in the container |
+| Home Assistant login (usernames must be lowercase since 2026.10) | NordPass / browser | `app-data/homeassistant/.storage` | `hass --script auth` in the container |
 | Tailscale | Google account SSO (`cormac85@`) | | Google account recovery. Keep its recovery codes offline. |
 | ntfy | none: no auth configured, reachable on the tailnet only | | n/a |
 | HTTPS cert | none | `compose-stacks/nextcloud/certs/` | `docs/cert-rotation.md` |
@@ -90,7 +90,7 @@ sudo borgmatic list
 sudo borgmatic info
 ```
 
-**What is and is not backed up.** Borg sends two things: `/mnt/backups/nextcloud` (the Nextcloud DB dumps and file snapshot) and `app-data/homeassistant` (users/auth in `.storage`, integrations, `zigbee.db`, `custom_components`, blueprints, `secrets.yaml`, and HA's own `backups/`). From Home Assistant it deliberately **excludes** the recorder history (`home-assistant_v2.db*`, constantly written so a live copy can be inconsistent, and expendable), logs, `tts`, `.cache` and `deps`; see `exclude_patterns` in `system-configs/borg-config-template.yaml`. **Not backed up:** Mosquitto data (abandoned project), ntfy cache, the HTTPS cert, and host config (`/etc/borgmatic`, `/etc/nextcloud-db.cnf`, `secrets/`, SSH keys). Those secrets are meant to live in the password manager.
+**What is and is not backed up.** Borg sends two things: `/mnt/backups/nextcloud` (the Nextcloud DB dumps and file snapshot) and `app-data/homeassistant` (users/auth in `.storage`, integrations, `zigbee.db`, `custom_components`, blueprints, `secrets.yaml`, and HA's own `backups/`, the tars HA creates automatically and before upgrades). From Home Assistant it deliberately **excludes** the recorder history (`home-assistant_v2.db*`, constantly written so a live copy can be inconsistent, and expendable), logs, `tts`, `.cache` and `deps`; see `exclude_patterns` in `system-configs/borg-config-template.yaml`. **Not backed up:** Mosquitto data (abandoned project), ntfy cache, the HTTPS cert, and host config (`/etc/borgmatic`, `/etc/nextcloud-db.cnf`, `secrets/`, SSH keys). Those secrets are meant to live in the password manager.
 
 Restore (use a scratch directory, never straight over live data):
 
@@ -113,7 +113,7 @@ Order, if the laptop dies or you re-image it:
 4. Restore the backup (§5) **before** first start of a fresh DB, so MariaDB doesn't initialise an empty one over the top.
 5. Install the cron jobs with `scripts/crontab_setup.sh` and the systemd override with `scripts/deploy.sh`.
 6. Renew the HTTPS cert: `docs/cert-rotation.md`.
-7. Home Assistant: restore `app-data/homeassistant` from the borg archive (`borgmatic extract --archive latest --path home/cormac/docker/app-data/homeassistant` into a scratch directory, then copy into place with the container stopped). Recorder history is not backed up, so the history graphs start empty.
+7. Home Assistant: restore `app-data/homeassistant` from the borg archive (`borgmatic extract --archive latest --path home/cormac/docker/app-data/homeassistant` into a scratch directory, then copy into place with the container stopped). Start the **same Home Assistant version the backup came from** (`.HA_VERSION` in the restored config; it matches the image tag pinned in the compose file at that time), then upgrade afterwards: newer versions migrate the config and database one way, and older code cannot read what they wrote. Recorder history is not backed up, so the history graphs start empty.
 
 ## 7. Quarterly checklist (10 minutes)
 
@@ -122,4 +122,5 @@ Order, if the laptop dies or you re-image it:
 - [ ] HTTPS cert has at least 30 days left (`docs/cert-rotation.md`).
 - [ ] Tailscale admin console login works (Google account + recovery codes).
 - [ ] The ntfy "Maintenance complete" message arrived this week.
+- [ ] Home Assistant is no more than two releases behind (`docs/home-assistant-upgrade.md`).
 - [ ] A second SSH key (phone/laptop) is in `authorized_keys`.

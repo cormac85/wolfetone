@@ -4,7 +4,7 @@ This repository contains the infrastructure-as-code and maintenance scripts for 
 
 ## Repository Structure
 
-*   `compose-stacks/`: Docker Compose configurations for all services.
+*   `compose-stacks/`: Docker Compose configurations for all services (Nextcloud, Home Assistant, and the `climote-decoder` RF-to-MQTT bridge, a small uv project).
 *   `scripts/`: Automation and maintenance scripts (e.g., `maintain.sh`).
 *   `system-configs/`: Templates of host-level system files (e.g., cron jobs, environment variables) for reference and disaster recovery.
 *   `app-data/`: **(Untracked)** Local bind mounts containing live databases, user files, and cryptographic keys.
@@ -14,6 +14,7 @@ This repository contains the infrastructure-as-code and maintenance scripts for 
 ## Further documentation
 
 *   [`docs/recovery.md`](docs/recovery.md): where each credential lives and how to recover from a lost password, key or host.
+*   [`docs/home-assistant-upgrade.md`](docs/home-assistant-upgrade.md): how Home Assistant is upgraded (pinned image, backups, verification, rollback).
 *   [`docs/cert-rotation.md`](docs/cert-rotation.md): the Tailscale/Let's Encrypt HTTPS cert (renewed every 90 days) and its renewal script.
 
 ---
@@ -103,6 +104,9 @@ The following is added to the **root** crontab (`sudo crontab -e`) by the script
 ```
 
 `crontab_setup.sh` also adds the Nextcloud background-job "tick" (`cron.php`, every 5 minutes) to **your own** crontab (`crontab -e`), not root's.
+
+### Home Assistant
+Home Assistant is **not** touched by `maintain.sh` (that script only updates the Nextcloud stack). Its image is pinned to an exact version in `compose-stacks/homeassistant/docker-compose.yaml` and upgraded by hand, so a monthly release never changes the server unattended. See [`docs/home-assistant-upgrade.md`](docs/home-assistant-upgrade.md) for the procedure.
 
 ---
 
