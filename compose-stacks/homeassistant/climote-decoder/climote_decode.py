@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import time
 import os
 import numpy as np
@@ -16,9 +17,17 @@ C = -5.2472281758e-05
 MQTT_HOST = os.environ.get("MQTT_HOST", "mosquitto")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
 MQTT_TOPIC_CLIMOTE = os.environ.get("MQTT_TOPIC_CLIMOTE", "climote/sensor/state")
-MQTT_TOPIC_WATCHMAN = os.environ.get("MQTT_TOPIC_WATCHMAN", "watchman/sensor/state")
 MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASS = os.environ.get("MQTT_PASS", "")
+
+# Capture timing. The Climote sends a ~20s train of repeated bursts every 10-15 minutes,
+# so after a good decode we sleep just under the shortest gap, then listen back-to-back
+# until the next train arrives.
+SAMPLE_RATE = 1_024_000
+CAPTURE_SECS = int(os.environ.get("CAPTURE_SECS", 10))
+SLEEP_AFTER_DECODE_SECS = int(os.environ.get("SLEEP_AFTER_DECODE_SECS", 540))
+MAX_HW_FAILURES = 3   # consecutive dongle failures before exiting so Docker restarts us
+HW_RETRY_SECS = 10
 
 
 def publish_mqtt(topic: str, payload: dict):
@@ -37,7 +46,7 @@ def publish_mqtt(topic: str, payload: dict):
             hostname=MQTT_HOST,
             port=MQTT_PORT,
             auth=auth,
-            client_id="climote_watchman_decoder",
+            client_id="climote_decoder",
             retain=False
         )
         print("MQTT Publish: SUCCESS", flush=True)
@@ -102,8 +111,11 @@ def extract_telemetry(bit_str: str):
     return raw_adc
 
 
-def process_capture_file(filename: str, symbol_w: int = 510):
-    """Reads raw I/Q data and iterates over detected RF bursts."""
+def process_capture_file(filename: str, symbol_w: int = 510) -> bool:
+    """Reads raw I/Q data and iterates over detected RF bursts.
+
+    Returns True if a reading was decoded and published.
+    """
     print(f"Reading {filename}...", flush=True)
     with open(filename, "rb") as f:
         raw = np.fromfile(f, dtype=np.uint8)
@@ -116,7 +128,7 @@ def process_capture_file(filename: str, symbol_w: int = 510):
     active_indices = np.where(power > threshold)[0]
     if len(active_indices) == 0:
         print("No active bursts found.", flush=True)
-        return
+        return False
 
     gap_indices = np.where(np.diff(active_indices) > 10000)[0]
     burst_starts = [active_indices[0]] + [active_indices[idx + 1] for idx in gap_indices]
@@ -137,98 +149,73 @@ def process_capture_file(filename: str, symbol_w: int = 510):
                 "raw_adc": raw_adc
             }
             publish_mqtt(MQTT_TOPIC_CLIMOTE, payload)
-            return  # Exit after first successful decode per capture
+            return True  # Exit after first successful decode per capture
         else:
             print("Could not locate composite preamble+sync pattern.", flush=True)
 
+    return False
+
 
 def capture_climote(capture_file: str):
-    """Executes rtl_sdr to record 868.5MHz RF data."""
-    print("\n[Climote] Capturing 868.5MHz RF data...", flush=True)
-    subprocess.run([
+    """Executes rtl_sdr to record CAPTURE_SECS of 868.5MHz RF data."""
+    print(f"\n[Climote] Capturing {CAPTURE_SECS}s at 868.5MHz...", flush=True)
+    cmd = [
         "rtl_sdr",
         "-f", "868500000",
-        "-s", "1024000",
-        "-n", "2048000",
+        "-s", str(SAMPLE_RATE),
+        "-n", str(SAMPLE_RATE * CAPTURE_SECS),
         "-g", "40",
-        capture_file
-    ], check=True, timeout=10)
-
-
-# ==========================================
-# WATCHMAN LISTENER LOGIC (433.92 MHz)
-# ==========================================
-
-def listen_watchman(duration_secs: int = 720):
-    """Listens for Watchman bursts via rtl_433 on 433.92MHz."""
-    print(f"\n[Watchman] Listening on 433.92MHz for {duration_secs}s...", flush=True)
-    cmd = [
-        "rtl_433",
-        "-f", "433.92M",
-        "-R", "43",  # Watchman / Oil-Sonic Protocol
-        "-F", "json",
-        "-T", str(duration_secs)
+        capture_file,
     ]
-    
-    proc = None
+    proc = subprocess.Popen(cmd)
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-        for line in proc.stdout:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                data = json.loads(line)
-                print(f"[Watchman] Signal Captured: {data}", flush=True)
-                publish_mqtt(MQTT_TOPIC_WATCHMAN, data)
-            except json.JSONDecodeError:
-                pass
-            except Exception as e:
-                print(f"[Watchman] Processing error: {e}", flush=True)
-                
-        proc.wait(timeout=duration_secs + 10)
+        proc.wait(timeout=CAPTURE_SECS + 15)
     except subprocess.TimeoutExpired:
-        if proc:
+        # Ask rtl_sdr to shut down cleanly so it releases the USB interface; SIGKILL only as a last resort.
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
             proc.kill()
-    except Exception as e:
-        print(f"[Watchman] Subprocess error: {e}", flush=True)
+            proc.wait()
+        raise
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, cmd)
 
 
 # ==========================================
-# MAIN MACRO LOOP
+# MAIN LOOP
 # ==========================================
 
 def main():
     capture_file = "/tmp/climote_capture.cu8"
-    
+    hw_failures = 0
+
     while True:
-        print("\n==================================================", flush=True)
-        print("Starting 15-Minute Macro Cycle", flush=True)
-        print("==================================================", flush=True)
-        
-        # 1. Climote Capture & Decode
+        decoded = False
         try:
             capture_climote(capture_file)
-            process_capture_file(capture_file)
-        except subprocess.TimeoutExpired:
-            print("[Climote] Hardware capture timed out.", flush=True)
-        except subprocess.CalledProcessError as e:
-            print(f"[Climote] Hardware capture failed: {e}", flush=True)
+            hw_failures = 0
+            decoded = process_capture_file(capture_file)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+            hw_failures += 1
+            print(f"[Climote] Hardware capture failed ({hw_failures}/{MAX_HW_FAILURES}): {e}", flush=True)
+            if hw_failures >= MAX_HW_FAILURES:
+                # Usually the dongle re-enumerated on the USB bus. Exit so `restart: unless-stopped`
+                # starts a fresh container with a fresh view of the device.
+                print("[Climote] Giving up; exiting so Docker restarts the container.", flush=True)
+                sys.exit(1)
+            time.sleep(HW_RETRY_SECS)
         except Exception as e:
             print(f"[Climote] Processing error: {e}", flush=True)
+            traceback.print_exc()
         finally:
             if os.path.exists(capture_file):
                 os.remove(capture_file)
-                
-        # Settle Tuner PLL
-        time.sleep(2)
-        
-        # 2. Watchman Listening Window (12 Minutes)
-        listen_watchman(duration_secs=720)
-        
-        # 3. Rest Window (2 Minutes) to avoid USB bus fatigue and lower duty cycle
-        print("\n[Bus Rest] Cooling down USB interface for 118s...", flush=True)
-        time.sleep(118)
+
+        if decoded:
+            print(f"[Climote] Sleeping {SLEEP_AFTER_DECODE_SECS}s until the next expected transmission.", flush=True)
+            time.sleep(SLEEP_AFTER_DECODE_SECS)
 
 
 if __name__ == "__main__":

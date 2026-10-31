@@ -29,10 +29,12 @@ services:
       context: ./climote-decoder
     container_name: climote-decoder
     restart: unless-stopped
-    privileged: true
-    # Pass through the USB bus so the container can access the RTL-SDR dongle
-    devices:
+    # Live bind mount of the USB bus (not `devices:`, which snapshots the nodes at container start
+    # and goes stale when the dongle re-enumerates, giving "usb_open error -4" until a restart).
+    volumes:
       - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - "c 189:* rwm"   # USB device nodes, including ones that appear later
     environment:
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
